@@ -1,0 +1,11 @@
+ 1. Electron temperature in zone [keV]                                    tea = 1.0e+02
+ 2. Proton temperature in zone [keV]                                      tna = 1.000e+02
+ 3. Particle density in zone [cm^(-3)]                                    n_e = 0.800e02
+ 4. Magn. field sent. (0 = spec., 1 = ep. w. el., 2 = ep. w. pr.)   ep_switch = 0
+ 5. Magnetic field [G]                                                B_field = 0.130000e+00
+ 6. Maxwellian fraction in zone                                         amxwl = 0.00000000000e+0
+ 7. Low-energy cut-off of nonthermal electron population:                gmin = 1.00000e+2
+ 8. High-energy cut-off of nonthermal electron population:               gmax = 1.000000e+5
+ 9. Non-thermal electron spectral index:                                p_nth = 2.300e+00
+ 10. Turbulence sp.index                                          q_turb(j,k) = 1.666667e+00
+ 11. Turbulence Level (deltaB/B0)^2                            turb_lev (j,k) = 1.000000e-20

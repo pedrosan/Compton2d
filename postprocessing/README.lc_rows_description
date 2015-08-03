@@ -1,0 +1,40 @@
+ ! first file name (e.g. p001_evb.dat)
+ ! \Gamma
+ ! r_max
+ ! output file for mu-bin #0
+ ! number of angular bins
+ ! angular bin #0 output
+ ! mu_min
+ ! mu_max
+ ! time step [s]
+ ! time offset (?)
+ ! stop at
+ ! number of energy regions
+ ! lower boundary region 1
+ ! upper boundary region 1
+ ! number of energy bins in this region (?)
+ ! log [0] or linear [1]
+ ! lower boundary region 2
+ ! upper boundary region 2
+ ! number of energy bins in this region (?)
+ ! log [0] or linear [1]
+ ! lower boundary region 3
+ ! upper boundary region 3
+ ! number of energy bins in this region (?)
+ ! log [0] or linear [1]
+ ! lower boundary region 4
+ ! upper boundary region 4
+ ! number of energy bins in this region (?)
+ ! log [0] or linear [1]
+ ! lower boundary region 5
+ ! upper boundary region 5
+ ! number of energy bins in this region (?)
+ ! log [0] or linear [1]
+ ! lower boundary region 6
+ ! upper boundary region 6
+ ! number of energy bins in this region (?)
+ ! log [0] or linear [1]
+ ! lower boundary region 7
+ ! upper boundary region 7
+ ! number of energy bins in this region (?)
+ ! log [0] or linear [1]

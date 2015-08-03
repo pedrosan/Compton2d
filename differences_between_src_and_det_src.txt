@@ -1,0 +1,71 @@
+
+"left"  file is the one in src/
+"right" file is the one in det_src/
+
+==== commonblock.f ====
+65c65
+<       double precision time, dt(2), tstop, mcdt, t0(ntmax), t1(ntmax)
+---
+>       double precision time, dt(2), tstop, dtmax, t0(ntmax), t1(ntmax)
+175c175
+<       common / times / time, dt, tstop, mcdt, t0, t1
+---
+>       common / times / time, dt, tstop, dtmax, t0, t1
+
+
+==== compton2d ====
+Binary files src/compton2d and det_src/compton2d differ
+
+
+==== fp_mpi.f ====
+416c416
+<       call MPI_ADDRESS(mcdt, address, ierr)
+---
+>       call MPI_ADDRESS(dtmax, address, ierr)
+
+
+==== imctrk2d.f ====
+125c125
+<        do 910, iitrk=1,split1  ! Xuhui
+---
+>        do 910, iitrk=1,1  ! Xuhui
+150a151
+>          mb_ran = 1.d0 - mb_ran/split1 ! Xuhui Chen 09/23/11
+
+
+==== reader.f ====
+168c168
+<       read(nin, 110) buffer, mcdt
+---
+>       read(nin, 110) buffer, dtmax
+214c214
+<       write(4,98) mcdt
+---
+>       write(4,98) dtmax
+
+
+==== read_record.f ====
+218c218
+<       read(nunit_misc,'(5e14.7)') time, dt(1), dt(2), tstop, mcdt
+---
+>       read(nunit_misc,'(5e14.7)') time, dt(1), dt(2), tstop, dtmax
+
+
+==== setup2d.f ====
+51c51
+<       dt(1) = mcdt*dist_max/inj_v
+---
+>       dt(1) = 1.d0*dist_max/inj_v
+
+
+==== write_record.f ====
+218c218
+<       write(nunit_misc,'(5e14.7)') time, dt(1), dt(2), tstop, mcdt
+---
+>       write(nunit_misc,'(5e14.7)') time, dt(1), dt(2), tstop, dtmax
+
+
+==== xec2d.f ====
+106a107
+> c      dt(1) = dmin1(dtmax, dt(1)) ! Xuhui del 5/11/09
+

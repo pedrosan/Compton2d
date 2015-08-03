@@ -1,0 +1,25 @@
+load observ.sm
+quit
+plot_spt
+quit
+data 1510_optical_030609.dat
+read {x 1 lylow 2}
+data 1510_optical_051109.dat
+read {lyhigh 2}
+set ylow=10**lylow
+set yhigh=10**lyhigh
+set yd = yhigh-ylow
+set lyd=log10(yd)
+set lyd=lg10(yd)
+set lyd=lg(yd)
+device x11
+limits (x) (lyd)
+box
+connect x lyd
+points x lyd
+ptype 4 0
+points x lyd
+erase
+box
+points x lyd
+quit

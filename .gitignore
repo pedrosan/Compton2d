@@ -1,0 +1,9 @@
+.cache/*
+.cache
+.Rhistory
+.Rproj.user
+.smhistory
+.*.swp
+*.o
+*.x
+a.out

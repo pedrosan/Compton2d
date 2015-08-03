@@ -1,0 +1,15 @@
+p001_evb.dat
+15               ! \Gamma
+1e17             ! r_max
+sed30.dat        ! output
+40               ! number of bins 
+4e5              ! start time
+1.2e6            ! end time
+0.9972           ! mu_min
+0.9984           ! mu_max
+1                ! number of energy regions
+1e-7             ! lower boundary
+1e10             ! upper boundary
+100              ! number of energy bins in this region
+0                ! Logarithmic (0) or linear (1) bins? [0]  
+n                ! Show energy binning? [n]

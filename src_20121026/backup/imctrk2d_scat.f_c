@@ -1,0 +1,792 @@
+      subroutine imctrk2d_scat(scat_flag)
+      implicit none
+c
+      integer jmax, kmax, ntmax, n_vol, n_gg, ucens, iucens, ducens
+      integer nphfield, split1, split2, scat_flag
+      parameter(split1=100)
+      parameter(split2=100)
+      parameter(jmax = 99)
+      parameter(kmax = 99)
+      parameter(ntmax = 100)
+      parameter(n_vol = 200)
+      parameter(n_gg = 100)
+c      parameter(ucens = 1000)
+c      parameter(iucens = 6000)
+c      parameter(ducens = 6000)
+      parameter(ucens = 5000000)
+      parameter(iucens = 30000000)
+      parameter(ducens = 30000000) ! Xuhui ucens
+      parameter(nphfield = 100)
+c
+      logical gone
+c
+      integer ncycle
+      integer i, j, k, nz, nr,  pair_switch, nsurfu(kmax), 
+     1        nsurfl(kmax), nsurfo(jmax), nsurfi(jmax)
+      integer iii,pfrl(30),ii, nscat, iitrk
+      integer jcsv,kcsv,jgpspcsv,
+     1        jgplccsv,jgpmucsv
+      double precision ewcsv, xnucsv, wmucsv,rprecsv,
+     1                 zprecsv, phicsv, dcencsv
+      integer jtsv,ktsv,jgpsptsv,
+     1        jgplctsv,jgpmutsv
+      double precision ewtsv, xnutsv, wmutsv,rpretsv,
+     1                 zpretsv, phitsv, dcentsv
+      
+      common /frl/ pfrl !Xuhui
+      integer idead, nptrks, knew, jnew, kbnd, jbnd, npkill
+      integer ncens(jmax, kmax), iscat, lwad, lwai, ndxout
+      integer npcen(jmax, kmax), i_gg, inout, npbnd
+      integer isurfmu, jgpsp, jgplc, jgpmu, nphtotal, nph_lc
+      integer nsv(jmax,kmax)
+      integer rseed, seeds(jmax,kmax), zseeds(jmax), 
+     1     rseeds(kmax), rand_switch
+      integer ibufin(iucens), ibufout(iucens)
+      integer ikind
+      integer Eta_switch
+c
+      integer incounter, outcounter, cmcounter, lkcounter
+      common / count / incounter, outcounter, cmcounter, lkcounter ! Xuhui cm
+      double precision cmener, ewold
+      common /compener/ cmener ! Xuhui
+      double precision r(kmax),  Z(jmax), rmin, Zmin, vol(jmax, kmax), 
+     1                 Asurfu(kmax), Asurfl(kmax), Asurfi(jmax),  
+     2                 Asurfo(jmax), zsurf(jmax,kmax) 
+      double precision Zr, Rr, eoutr(jmax, kmax)
+      double precision disp, psq, disbr, dpbsq, Zbnd, rbnd,
+     1                 xqsqleft, trld, trldb, dcol       
+      double precision xnu, wmu, rpre, zpre, phi, dcen
+      double precision time, dt(2), t0(ntmax), t1(ntmax), tstop,
+     1                 dtmax
+      double precision wtmin, wkth, wmue, ew, ewsv
+      double precision Egg_min, n_ph(n_gg, jmax, kmax), 
+     1                 k_gg(n_gg, jmax, kmax), E_gg(n_gg)        
+      double precision kgg, kgg0, kgg1
+      double precision f_pair(jmax,kmax), pair_enhance
+      double precision Eloss_sy(jmax,kmax), Eloss_cy(jmax,kmax),  
+     1                 Eloss_br(jmax,kmax), Eloss_tot(jmax,kmax),
+     2                 Eloss_th(jmax,kmax)
+      double precision kappa_tot(n_vol, jmax, kmax),
+     1                 eps_tot(n_vol, jmax, kmax), E_ph(n_vol),
+     2                 eps_th(n_vol, jmax, kmax)
+      double precision ecens(jmax, kmax)
+      double precision theta, Eta, comac, enexc
+      double precision edep(jmax, kmax), prdep(jmax, kmax)
+      double precision sigabs, velfact, facomp
+      double precision colmfp, mb_ran, denom, f
+      double precision sigcom, sigcomex, sigsc, deleabs, delecomp
+      double precision ewnew, xabs, ekill, ekillt, ewpl, sstar
+      double precision delpr, exan, wmusv, xnusv, wmustar
+      double precision dbufin(ducens), dbufout(ducens)
+      double precision n_field(nphfield,jmax,kmax), E_field(nphfield)
+      double precision fibran, rnew, znew
+c
+      common / random / rseed, seeds, zseeds, rseeds, rand_switch
+      common / photonfield / n_field, E_field
+      common / zones / z, r, rmin, zmin, vol, Asurfu, Asurfl,
+     1                 Asurfi, Asurfo, zsurf
+      common / izones / nz, nr
+      common / photon / xnu, wmu, phi, rpre, zpre, dcen, ew 
+      common / iphoton / j, k, jgpsp, jgplc, jgpmu
+      common / times / time, dt, t0, t1, tstop, dtmax
+      common / fpair / f_pair 
+      common / ps / pair_switch 
+      common / vol_em / kappa_tot, eps_tot, E_ph, Eloss_tot, Eloss_br,
+     1                  Eloss_cy, Eloss_sy, Eloss_th, eps_th
+      common / ph_numbers / nsurfu, nsurfl, nsurfo, nsurfi, nsv, 
+     1                      ncens, npcen
+      common / cens_energy / ecens
+      common / ndx / ndxout
+      common / deposition / edep, prdep
+      common / itrk / idead, iscat 
+      common / gg_abs / n_ph, k_gg, E_gg
+      common / sigmas / comac, enexc
+      common / nc / ncycle
+      common / dbuffer / dbufin, dbufout
+      common / ibuffer / ibufin, ibufout
+c
+c        common / debug / nlost,gone
+c        
+c
+c      if(ncycle.gt.0) write(*,*) 'in imctrk2d j=', j
+c      stop
+c        
+c
+       idead = 0
+       sigabs = 1.d-40
+       velfact = 1.d0
+       facomp = 1.d0
+c       wkth = 1.d-2
+       wkth = 1.d-15
+c
+c      idead = -1 from imcvol if rwlk turned on.
+c              =  0 particle returned from rwlk alive.  track it.
+c              =  1 killed in rwlk or imcleak.
+c              =  2 retire rwlk particle to census.
+c              =  3 particle was reflected from surface in imcleak.
+c              =  4 particle leaked into void for tracking.
+c
+c     
+         wtmin = wkth*ew
+c
+c         if ( idead. eq. 1) go to 230
+c         
+c        Sum up squared photon energies
+c        and squares for recoil  
+c         
+c          sum_e = sum_e + 1.957d-3*ew*xnu
+c          sum_e2 = sum_e2+ew*((1.957d-3*xnu)**2)
+c
+       call comtot(j, k, xnu, 1) ! Xuhui
+       nscat = 0
+       ewtsv = ew/split1
+       dcentsv = dcen
+       xnutsv = xnu
+       zpretsv = zpre
+       rpretsv = rpre
+       wmutsv = wmu
+       phitsv = phi
+       jtsv = j
+       ktsv = k
+       jgpsptsv = jgpsp
+       jgplctsv = jgplc
+       jgpmutsv = jgpmu
+       do 900, iitrk=1,split1  ! Xuhui
+       ew = ewtsv
+       dcen = dcentsv
+       xnu = xnutsv
+       zpre = zpretsv
+       rpre = rpretsv
+       wmu = wmutsv
+       phi = phitsv
+       j = jtsv
+       k = ktsv
+       jgpsp = jgpsptsv
+       jgplc = jgplctsv
+       jgpmu = jgpmutsv
+  100  continue
+c         mb_ran = drand(0)
+       if(scat_flag .eq. 0)then
+         mb_ran = 1.e-10
+       else
+         mb_ran = fibran()
+       endif  ! Xuhui
+         if (mb_ran.gt.0.) then
+             colmfp = -dlog(mb_ran)
+         else 
+             goto 100
+         endif
+c
+  110  continue
+c
+c       if (xnu.gt.2.d0) then
+c          write(*,*)
+c          if(ncycle.gt.0) write(*,*) 'in imctrk:'
+c          write(*,*) ' xnu = ', xnu
+c          write(*,*) ' wmu = ', wmu
+c          write(*,*) ' a phi = ', phi
+c          write(*,*) ' rpre = ', rpre
+c          write(*,*) ' zpre = ', zpre
+c          write(*,*) ' dcen = ', dcen
+c          write(*,*) ' ew = ', ew
+c          write(*,*) ' rseed=', rseed
+c          if(xnu.gt.2.d0) stop
+c       endif
+c       
+       if (ew.lt.1.d-40) goto 900
+       if (wmu.gt.9.9999999d-1) wmu = 9.9999999d-1
+       if (wmu.lt.-9.9999999d-1) wmu = -9.9999999d-1
+c          
+         if (pair_switch.eq.1) then
+             pair_enhance = 1.d0 + 2.d0*f_pair(j, k)
+         else
+             pair_enhance = 1.d0
+         endif
+c  
+c         if (xnu.gt.4.3d2) 
+c         if(ncycle.gt.0) write(*,*) 'Calling comtot ...'
+c
+c         if((wmu.gt.0.48107d0).and.(wmu.lt.0.48109d0)) then
+c            write(*,*) 'b4 comtot xnu=',xnu
+c         endif
+c         call comtot(j, k, xnu, 1) ! Xuhui moved this call in front of the loop
+c         if((wmu.gt.0.48107d0).and.(wmu.lt.0.48109d0)) then
+c            write(*,*) 'af comtot xnu=',xnu
+c         endif
+c         if(ncycle.gt.0) write(*,*) 'af comtot'
+c
+c         if (xnu.gt.4.3d2) then
+c            write(*,*) 'comac = ',comac
+c            write(*,*) 'enexc = ',enexc
+c         endif
+c
+         sigcom = velfact*comac*pair_enhance
+         sigcomex = velfact*enexc*pair_enhance
+         sigsc = sigcom
+c
+         if (k.eq.1) then
+            xqsqleft = rmin**2
+         else
+            xqsqleft = r(k-1)**2
+         endif
+c         
+c         
+        dcol = colmfp/sigsc
+
+        iii = int(log10(dcol))
+        if(iii.le.30 .and. iii.gt.0)pfrl(iii) = pfrl(iii) +1 !Xuhui
+
+        if ( dcen .le. dcol ) then
+           trld = dcen
+           ikind = 2
+        else
+          trld = dcol
+          ikind = 3
+        endif
+c
+c        if (xnu.gt.4.3d2) write(*,*) 'trld(col/cen) = ',trld
+c
+       Eta = cos(phi)
+c     Eta_switch is +1 if phi is in quadrants I or II, and -1
+c     if it is in quadrants III or IV.  This way
+c     the quadrant of phi is not lost when taking its cosine.  
+c     J. Finke, 6 Sept. 2005
+c       write(*,*) 'b4 eta_switch=', eta_switch, ' phi=', phi
+       if(( phi.le.3.141592654d0).and.(phi.ge.1.d-10) ) then
+          Eta_switch = 1
+       else
+          Eta_switch = -1
+       endif
+c       if(ncycle.gt.0) 
+c         if((wmu.gt.0.48107d0).and.(wmu.lt.0.48109d0)) then
+c            write(*,*) 'af phi=', phi, ' eta_switch=', eta_switch
+c         endif
+c       write(*,*) 'also eta=', Eta
+c       
+       if (Eta.gt.9.9999999d-1) Eta = 9.9999999d-1
+       if (Eta.lt.-9.9999999d-1) Eta = -9.9999999d-1
+c
+       disp = Eta*rpre
+       psq = rpre*rpre*(1. - Eta**2)
+c
+c       if (xnu.gt.4.d2) write(*,*) 'k = ',k
+c       if (xnu.gt.4.d2) 
+c       if(ncycle.gt.0) write(*,*) 'xqsqleft = ',xqsqleft
+c       if (xnu.gt.4.d2) write(*,*) 'disp = ',disp
+c       if (xnu.gt.4.d2) write(*,*) 'psq = ',psq
+c       if (xnu.gt.4.d2) write(*,*) 'rbnd = ',rbnd
+c       if (xnu.gt.4.d2) write(*,*) 'Eta = ',Eta
+c
+       if ((Eta.lt.0.d0) .and. (psq.lt.xqsqleft))  then
+c
+          incounter = incounter + 1
+          kbnd = k-1
+          inout = -1
+          if (k.gt.1) then
+             rbnd = r(k-1)
+          else
+             rbnd = rmin
+          endif
+c
+       else
+          outcounter = outcounter + 1
+          kbnd = k
+          inout = 1
+          rbnd = r(k)
+
+       endif     
+c
+       dpbsq = rbnd**2 - psq
+       if (dpbsq.lt.1.d-6) dpbsq = 1.d-6
+c
+c       if (xnu.gt.4.d2) 
+c       if(ncycle.gt.0) write(*,*) 'inout = ',inout
+c       if (xnu.gt.4.d2) write(*,*) 'rbnd = ',rbnd
+c       if (xnu.gt.4.d2) write(*,*) 'dpbsq = ',dpbsq
+c
+       disbr = dble(inout)*sqrt(dpbsq) - disp
+       trldb = disbr/dsqrt(1.d0 - (wmu**2))
+       f     = disbr
+       Zr = Zpre + wmu*trldb
+c
+c       if (xnu.gt.4.d2) write(*,*) 'trld(r) = ',trldb
+c       if (xnu.gt.4.d2) write(*,*) 'disbr = ',disbr
+c       if (xnu.gt.4.d2) write(*,*) 'Zr = ',Zr
+c       if(ncycle.gt.0) write(*,*) 'c j= ', j
+c
+        if (j.eq.1) then
+c        
+           if  ( Zr.gt.Z(j)) then
+c
+c         nearest boundary = upward z boundary
+c          
+              Zbnd = Z(j)
+              knew = k
+              jnew = j+1
+              f = (zbnd - zpre)*dsqrt(1.d0 - wmu**2)/wmu
+              Rr = dsqrt (rpre**2 + f**2 + 2.d0*rpre*f*Eta)
+              rbnd =  Rr     
+              trldb = dsqrt(f**2 + (Zbnd - Zpre)**2)
+                               
+           else if (Zr.lt.zmin) then
+c
+c        nearest boundary = downward z boundary
+c       
+              Zbnd = zmin
+              knew = k
+              jnew = j - 1
+              f = (zmin - zpre)*dsqrt(1.d0 - wmu**2)/wmu
+              Rr = dsqrt (rpre**2 + f**2 + 2.d0* rpre*f*Eta)           
+              rbnd = Rr
+              trldb = dsqrt(f**2 + (Zbnd - Zpre)**2)
+     
+           else 
+c
+c        nearest boundary = r boundary
+c
+               knew = k + inout
+               jnew = j
+               if (kbnd.gt.0) then
+                  Rr = r(kbnd)
+               else
+                  Rr = rmin
+               endif
+               rbnd = Rr
+               Zbnd = Zr
+              
+           endif
+c
+        else
+c       j is greater than 1   cccccccccccccccccccccc
+c
+           if  ( Zr.gt.Z(j)) then
+c
+c         nearest boundary = upward z boundary
+c          
+              Zbnd = Z(j)
+              knew = k
+              jnew = j+1
+              f = (zbnd - zpre)*dsqrt(1.d0 - wmu**2)/wmu
+              Rr = dsqrt(rpre**2 + f**2 + 2.d0*rpre*f*Eta)
+              rbnd =  Rr     
+              trldb = dsqrt(f**2 + (Zbnd - Zpre)**2)
+                           
+           else if (Zr.lt.Z(j-1)) then
+c
+c        nearest boundary = downward z boundary
+c       
+              Zbnd = Z(j-1)
+              knew = k
+              jnew = j - 1
+              f = (zbnd - zpre)*dsqrt(1.d0 - wmu**2)/wmu
+              Rr = dsqrt(rpre**2 + f**2 + 2.d0*rpre*f*Eta)            
+              rbnd = Rr
+              trldb = dsqrt(f**2 + (Zbnd - Zpre)**2)
+c
+           else
+c
+c        nearest boundary = r boundary
+c
+               knew = k + inout
+               jnew = j
+               if (kbnd.gt.0) then
+                  Rr = r(kbnd)
+               else
+                  Rr = rmin
+               endif
+               rbnd = Rr
+               Zbnd = Zr
+
+           endif
+         endif
+c
+       if (trldb.lt.trld) then
+c  
+           ikind = 1
+           trld = trldb
+           rnew = rbnd
+           znew = Zbnd
+c
+       else 
+           jnew = j
+           knew = k
+           f = trld*dsqrt(1.d0 - wmu**2)
+           rnew = dsqrt(f**2 + rpre**2 + 2.d0*f*rpre*Eta)
+           znew = zpre + trld*wmu
+c
+       endif
+c
+c       if (xnu.gt.4.d2) 
+c       if(ncycle.gt.0) write(*,*) 'Calculating i for n_vol:'
+c
+       do 122 i = 1, n_vol
+ 122      if (xnu.lt.E_ph(i)) goto 123
+ 123   continue
+c
+       if (pair_switch.eq.0) goto 128
+       do 127 i_gg = 1, n_gg
+ 127   if (xnu.lt.E_gg(i_gg)) goto 128
+ 128   continue
+c
+c       if (xnu.gt.4.d2) write(*,*) 'i = ', i
+c
+         sigabs = sigabs + pair_enhance*kappa_tot(i, j, k)
+c
+c       if (xnu.gt.4.d2) 
+c         if(ncycle.gt.0) write(*,*) 'sigabs = ', sigabs
+c
+         if (pair_switch.eq.1) then
+            if (xnu.lt.E_gg(1)) then
+               kgg = (xnu/E_gg(1))*k_gg(1, j, k)
+            else if (i_gg.eq.n_gg) then
+               kgg = k_gg(n_gg, j, k)
+            else
+               kgg0 = k_gg(i_gg, j, k)
+               kgg1 = k_gg(i_gg+1, j, k)
+               kgg = kgg0 + (xnu - E_gg(i_gg))*(kgg1 - kgg0)
+     1                     /(E_gg(i_gg+1) - E_gg(i_gg))
+            endif
+            sigabs = sigabs + kgg
+         endif
+         if (sigabs.lt.1.d-40) sigabs = 1.d-40
+c
+         xabs = sigabs*trld
+c
+         if (xabs.lt.100.) then
+            ewnew = ew*dexp(-xabs)
+        else
+            ewnew = 0.
+        endif
+        if ( ewnew .le. wtmin ) then
+           npkill = npkill + 1
+           ekill  = ekill + ewnew
+           ekillt = ekillt + ewnew
+           ewnew  = 0.
+       endif
+c
+c       if (xnu.gt.4.d2) write(*,*) 'ewnew = ', ewnew
+c
+       if ((xnu.gt.47.d0).and.(sigabs.gt.1.d-40)) then
+          deleabs = (ew - ewnew)*(sigabs - k_gg(i_gg, j, k))/sigabs
+       else
+          deleabs = ew - ewnew
+       endif
+       if (deleabs.lt.1.d-50) deleabs = 1.d-50
+c
+c
+c  ewpl = energy weight path length
+c
+       if ( xabs .le. .00001d0 ) then
+         ewpl = ew*trld*(1.d0-.5d0*xabs)
+         wmustar = wmu
+      else
+         ewpl = deleabs/sigabs
+c  119    mb_ran = drand(0)
+  119    mb_ran = fibran()
+         if (mb_ran.lt.(ew/deleabs)) then
+            sstar = -dlog(1. - mb_ran*deleabs/ew)/sigabs
+         else
+            goto 119
+         endif
+         
+         denom = dsqrt (rpre**2 + 2.*wmu*rpre*sstar + sstar**2)
+         wmustar =  (wmu*rpre + sstar)/denom
+      endif
+c
+      delpr = deleabs*wmustar*3.d10
+      delecomp = facomp*sigcomex*ewpl
+      edep(j, k) = edep(j, k) + deleabs + delecomp
+      prdep(j, k) = prdep(j, k) + delpr
+c      write(*,*) 'edep=', edep(j,k), ' deleabs=', deleabs, 
+c     1     ' delecomp=', delecomp
+c      write(*,*) 'facomp=', facomp, ' sigcomex=', sigcomex
+c      write(*,*) 'velfact=', velfact, ' enexc=', enexc
+c      write(*,*) 'pair_enhance=', pair_enhance
+c      stop
+c
+      if (ewnew .le. 1.d-40) go to 900
+c
+c      write(*,*) 'b4 move eta=', Eta
+      ew = ewnew
+      dcen = dcen - trld
+c      if (rnew.gt.1.d-10) then
+c         Eta = (trld - Eta*rpre)/rnew
+c      else      
+         Eta = (trld + Eta*rpre)/rnew
+c      endif
+      
+      if (Eta.gt.0.999999999d0) Eta = 0.999999999d0
+      if (Eta.lt.-0.999999999d0) Eta = -0.999999999d0
+c      write(*,*) 'af move eta=', Eta
+      phi = acos(Eta)
+c      write(*,*) 'before switch =', eta_switch, ' phi=', phi
+      if (eta_switch.eq.-1) phi = 6.283185307d0 - phi
+       if(( phi.le.3.141592654d0).and.(phi.ge.1.d-10) ) then
+          Eta_switch = 1
+       else
+          Eta_switch = -1
+       endif 
+c      write(*,*) 'after switch phi=', phi, ' eta_switch=', eta_switch
+      rpre = rnew
+      Zpre = znew
+c      write(*,*) 'bb eta_switch=', eta_switch, ' phi=', phi
+c      call bin_add(phi)  
+c      write(*,*) 'called bin_add'
+c       
+c       write(*,*) 'rnew = ',rpre
+c       write(*,*) 'znew = ',zpre
+c       write(*,*) 'phinew = ',phi
+c       write(*,*) 'ewnew = ',ewnew
+c       if(ncycle.gt.0) write(*,*) 'a ikind = ',ikind
+c       if(ncycle.gt.0) write(*,*) 'a jnew = ',jnew, ' j=', j
+c       write(*,*) 'knew = ',knew, ' k=', k
+c       
+      
+       if ( ikind .eq. 3 ) go to 210
+       if ( ikind .eq. 1 ) go to 900
+       if ( ikind .eq. 2 ) go to 900
+c      if ( ikind .eq. 2 ) go to 150
+c
+c     particle has reached boundary, r(kbnd) (ikind = 1)
+c
+c      npbnd = npbnd + 1
+c      eoutr(jbnd, kbnd) = eoutr(jbnd, kbnd) + inout*ew/dt(1)
+c
+      colmfp = colmfp - sigsc*trld
+c
+      
+ 140  continue
+      if((jnew .eq. nz+1) .or. (jnew.eq.0) .or.
+     1   (knew .eq. nr+1) .or. (knew.eq.0)) then
+c
+         j = jnew
+         k = knew
+c
+c         if(ncycle.gt.0) write(*,*) 'jnew = ',jnew
+c         write(*,*) 'knew = ',knew
+c         write(*,*) 'Calling imcleak ...'
+c         if(knew.eq.0) incounter = incounter + 1
+c         if(knew.eq.nr+1) outcounter = outcounter + 1
+c
+c         write(*,*) 'calling imcleak'
+         call imcleak
+         lkcounter = lkcounter + 1 ! Xuhui
+c
+c         write(*,*) 'idead = ',idead
+c
+         if (idead .eq. 1) go to 900
+c
+         if (idead .eq. 4) then
+            k = 0
+            go to 100
+         endif
+c
+c         prdep(j, k) = prdep(j, k) - 6.d10*wmu*ew
+c
+c         if(izbnd .eq. jm) then
+c            eoutr(jm) = eoutr(jm) - ew/dt(1)
+c         else
+c            eoutr(1)  = eoutr(1)  + ew/dt(1)
+c         endif
+c
+c         write(*,*) 'b ikind=', ikind, ' going to 110'
+         go to 110
+      endif
+c     
+      k = knew
+      j = jnew
+c      write(*,*) 'a ikind=', ikind, ' going to 110'
+      go to 110
+c
+c       case ikind = 2: write particle to census
+c
+c
+ 150  continue
+      npcen(j,k) = npcen(j,k) + 1
+ 160  continue
+      ecens(j, k) = ecens(j, k) + ew
+c
+c      write(*,*) 'npcen = ',npcen(j,k)
+c      write(*,*) 'ecens = ',ecens(j,k)
+c
+      if (pair_switch.eq.1) then
+         do 162 i_gg = 1, n_gg
+ 162        if (xnu.lt.E_gg(i_gg)) goto 163
+ 163     continue
+         Egg_min = (E_gg(1)**2)/E_gg(2)
+         if (xnu.gt.Egg_min) then
+             n_ph(i_gg, j, k) = n_ph(i_gg, j, k) + (ew*6.25d8)/xnu
+         endif
+      endif
+c
+      do 165 i_gg = 1, nphfield
+  165 if (xnu.lt.E_field(i_gg)) goto 166
+  166 continue
+      Egg_min = (E_field(1)**2)/E_field(2)
+c
+c      if(ncycle.gt.0) write(*,*) 'i_gg = ',i_gg
+c
+      if (xnu.gt.Egg_min) then
+         n_field(i_gg, j, k) = n_field(i_gg, j, k) 
+     1                       + 6.25d8*ew/xnu
+      endif
+c
+       lwad = 6*ndxout
+       lwai = 6*ndxout
+       dbufout(lwad+1) = rpre
+       dbufout(lwad+2) = Zpre
+       dbufout(lwad+3) = wmu
+       dbufout(lwad+4) = phi
+       dbufout(lwad+5) = ew
+       dbufout(lwad+6) = xnu
+       ibufout(lwai+1) = jgpsp
+       ibufout(lwai+2) = jgplc
+       ibufout(lwai+3) = jgpmu
+       ibufout(lwai+4) = j
+       ibufout(lwai+5) = k
+       ibufout(lwai+6) = int( fibran()*1.d5 )
+       ndxout = ndxout + 1
+c       if((ibufout(lwai+6).eq.39876).or.(ibufout(lwai+4).eq.39876)) then
+c          write(*,*) 'ibufout4=',ibufout(lwai+4)
+c          write(*,*) 'ibufout5=',ibufout(lwai+5)
+c          write(*,*) 'ibufout6=',ibufout(lwai+6)
+c          stop
+c       endif
+       if(ndxout .ge. ucens) then
+c          if(ncycle.gt.0) write(*,*) 'b j=', j
+c          if(ncycle.gt.0) write(*,*) 'b4 rseed=', rseed
+c          write(*,*) 'xnu=', xnu, ' rpre=', rpre, ' zpre=', zpre
+          call write_cens(ndxout) ! Xuhui cens
+c          if(ncycle.gt.0) write(*,*) 'af rseed=', rseed
+c          write(*,*) 'in imctrk after write_cens'
+          write(*,*) 'too many photons'
+          stop ! Xuhui cens
+          ndxout = 0
+c          write(*,*) 'in imctrk after ndxout'
+       endif
+c       write(*,*) 'in imctrk going to 900'
+c       if( (j.eq.7).and.(k.eq.3) ) then
+c          write(*,*) 'xnu=', xnu, ' rseed=', rseed
+c          write(*,*) 'zpre=', zpre, ' rpre=', rpre
+c       endif
+       go to 900
+c
+c
+c     case ikind = 3: Compton scattering
+c
+ 210   continue
+       write(*,*)'second scattering' 
+       nscat = nscat + 1 ! Xuhui
+       wmusv = wmu
+       xnusv = xnu
+       ewsv = ew
+       iscat = 0
+c       
+c       if ( drand(0)*sigsc .lt. sigcom ) iscat = 1
+c
+c       write(*,*) 'Calling comp2d ...'
+c
+c       write(*,*) 'b4 compb2d phi=', phi, ' eta_switch=', eta_switch
+
+*****************XUHUI*******************************************************
+       ewcsv = ew/split2
+       dcencsv = dcen
+       xnucsv = xnu
+       zprecsv = zpre
+       rprecsv = rpre
+       wmucsv = wmu
+       phicsv = phi
+       jcsv = j
+       kcsv = k
+       jgpspcsv = jgpsp
+       jgplccsv = jgplc
+       jgpmucsv = jgpmu
+       
+       do 220, ii=1,split2
+       ew = ewcsv
+       dcen = dcencsv
+       xnu = xnucsv
+       zpre = zprecsv
+       rpre = rprecsv
+       wmu = wmucsv
+       phi = phicsv
+       j = jcsv
+       k = kcsv
+       jgpsp = jgpspcsv
+       jgplc = jgplccsv
+       jgpmu = jgpmucsv
+       
+       ewold = ew
+       call compb2d
+       cmener = cmener + ew - ewold
+       cmcounter = cmcounter +1 ! Xuhui
+       call imctrk2d(1)
+220    continue
+
+       if(phi.gt.6.283185307d0) phi = phi - 6.283185307d0
+       if(( phi.le.3.141592654d0).and.(phi.ge.1.d-10) ) then
+          Eta_switch = 1
+       else
+          Eta_switch = -1
+       endif 
+c       write(*,*) 'af compb2d phi=', phi, ' eta_switch=', eta_switch
+c
+c       write(*,*) 'Returned from comp2d ...'
+c
+c       if (gone) then
+c       gone=.false.
+c       goto 900
+c       endif
+c
+c      goto 100
+
+ 230  continue         
+ 900  continue
+      ew = (split1-nscat)*ewtsv
+      dcen = dcentsv
+      xnu = xnutsv
+      zpre = zpretsv
+      rpre = rpretsv
+      wmu = wmutsv
+      phi = phitsv
+      j = jtsv
+      k = ktsv
+      jgpsp = jgpsptsv
+      jgplc = jgplctsv
+      jgpmu = jgpmutsv
+      write(*,*)'I survived in line 757'
+      call imctrk2d(0)
+      write(*,*)'I survived in line 759'
+
+c
+c      write(*,*) 'end imctrk2d'
+      return
+      end    
+c
+
+       
+c
+cccccccccccccccccccccccccccccccccccccccccccccccccc 
+c Tue Jun 13 13:26:40 EDT 2006
+c version: 2
+c Name: J. Finke
+c Changed common block 'random'.     
+c
+cccccccccccccccccccccccccccccccccccccccccccccccccc 
+c Fri Jun 16 12:31:21 EDT 2006
+c version: 3
+c Name: J. Finke
+c seed is now stored in census files. imcfield 
+c is now determinable.
+c
+cccccccccccccccccccccccccccccccccccccccccccccccccc
+c Mon Sep 22 21:33  CDT 2008
+c Name : Xuhui Chen
+c changed the code to split the photon before it is
+c determined whether the photon will be compton
+c scattered, and recombine the unscattered ones, and
+c further split the scattered one. This is to avoid
+c the lack of the number of high energy photon. To 
+c do this, imctrk_scat and imctrk_noscat are created 
+c and modified from this subroutine.
+      

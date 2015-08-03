@@ -1,0 +1,35 @@
+
+It may not be as easy a task as it seems to be. The current code may be 
+a little different from the code used to run the one you want to repeat, 
+such as in the sense of the format of input file etc. It may be easier 
+if you directly use the exe file in the run you want to repeat.
+
+The steps to run a job on davinci:
+
+0. BEFORE SUBMITTING, remember to remove all the *.dat file in the
+   directory and any file in the sub directories.
+
+1. copy the `run_ext15' folder to /scratch/gfossati/ 
+   /scratch/ is the only place allowing large amount of input and output. 
+   Not doing calculation there will result in a warning. 
+   Similar locations on sugar and stic are call `/shared.scratch/'.
+
+2. Do 'make' under the `src' folder.
+   Copy the `compton2d' executable to /scratch/gfossati/run_ext15
+
+3. Modify the `xuhui.pbs' file in /scratch/gfossati/run_ext15 
+   as desired (of course you can change the name of the pbs file.)
+
+4. Modify the `input.dat' and `inputm.dat' files in 
+       /scratch/gfossati/run_ext15/input/
+   and under this path, 
+   Use the `cp50.csh' script to copy `inputm.dat' to zone specific input files.
+
+5. Under the /scratch/gfossati/run_ext15/ path, type `qsub xuhui.pbs'.
+
+6. Use "qstat -u gfossati" to check the status of the job.
+
+If you want to use the existing exe file to run the job, all you need to do
+is copy the files to /scratch/, and type 'qsub xuhui.pbs' under the
+run_ext15/ directory. 
+

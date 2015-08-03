@@ -1,0 +1,40 @@
+p001_evb.dat
+15               ! \Gamma
+1e17             ! r_max
+lc07_ev0.dat     ! output file for mu-bin #0
+1                ! number of angular bins
+lc07_ev0.dat     ! angular bin #0 output
+0.9974           ! mu_min
+0.9982           ! mu_max
+2e4              ! time step [s]
+0                ! time offset (?)
+1.5e6            ! stop at
+7                ! number of energy regions
+1e-6             ! lower boundary region 1
+3e-6             ! upper boundary region 1
+1                ! number of energy bins in this region (?)
+0                ! log [0] or linear [1]
+1.25e-3          ! lower boundary region 2
+1.9e-3           ! upper boundary region 2
+1                ! number of energy bins in this region (?)
+0                ! log [0] or linear [1]
+1.9e-3           ! lower boundary region 3
+7.5e-3           ! upper boundary region 3
+1                ! number of energy bins in this region (?)
+0                ! log [0] or linear [1]
+1.5e-2           ! lower boundary region 4
+2e-2             ! upper boundary region 4
+1                ! number of energy bins in this region (?)
+0                ! log [0] or linear [1]
+1                ! lower boundary region 5
+5                ! upper boundary region 5
+1                ! number of energy bins in this region (?)
+0                ! log [0] or linear [1]
+1e3              ! lower boundary region 6
+1e4              ! upper boundary region 6
+1                ! number of energy bins in this region (?)
+0                ! log [0] or linear [1]
+1e5              ! lower boundary region 7
+1e6              ! upper boundary region 7
+1                ! number of energy bins in this region (?)
+0                ! log [0] or linear [1]

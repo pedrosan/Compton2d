@@ -1,0 +1,114 @@
+data 454_fermi.lc
+read {x 1 y 3}
+limits x y
+device 11
+device x11
+box
+connect x y
+quit
+data 454_fermi.lc
+read {x 1 y 3}
+device x11
+limits x y
+ticksize 1000 2000 -1 10
+connect x y
+box
+ticksize 1000 2000 -1 1
+connect x y
+ticksize 0.5 2 -1 1
+box
+erase
+ticksize 100 200 -1 1
+box
+ticksize 100 200 -0.1 1
+box
+ticksize 100 200 -2 1
+ticksize 100 200 -1 0.5
+ticksize 100 200 -1 5
+ticksize 100 200 -1 1
+box
+erase
+ticksize 100 200 -10 1
+ticksize 100 200 -1 2
+box
+ticksize 100 200 -0.2 1
+box
+ticksize 100 200 -0.1 0.5
+box
+ticksize 100 200 -0.01 0.05
+box
+erase
+ticksize 100 200 -0.1 1
+ticksize 100 200 -0.1 1 box
+connect x y
+quit
+data 454_fermi.lc
+read {x 1 y 3}
+ticksize 100 200 -0.1 1
+limits x y
+device x11
+box
+connect x y
+set ly=LG(y)
+limits x ly
+erase
+ticksize 100 200 -0.1 1
+box
+erase
+ticksize 100 200 -0.5 2
+box
+ticksize 100 200 -1 5
+erase
+box
+connect x ly
+limits 55100 55400 ly
+erase
+box
+connect x ly
+location 1500 51000 3500 31000
+erase
+box
+limits x ly
+erase
+box
+location 2500 38000 3500 31000
+erase
+box
+erase
+location 2500 35000 3500 31000
+box
+location 2500 31000 3500 31000
+erase
+box
+location 3500 31000 3500 31000
+erase
+box
+connect x ly
+device close x11
+device postencap 454_fermi2.eps
+limits 55150 55700 ly
+box
+connect x ly
+quit
+plot_454
+quit
+plot_454
+quit
+plot_454
+quit
+plot_454
+quit
+plot_454
+quit
+plot_454
+quit
+plot_454
+quit
+plot_454
+quit
+plot_454
+quit
+plot_454
+quit
+plot_454
+quit

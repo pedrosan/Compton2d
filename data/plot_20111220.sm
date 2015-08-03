@@ -1,0 +1,1939 @@
+
+##-------------------------------------------------------------------------------
+## set_read_sim_gf
+## It defines 
+##    + the TOP data directory (XC_DATA) 
+##    + the subdirectory to use (SIMDIR)
+##    + some additional case-dependent variables
+set_read_sim_gf
+
+        #define XC_DATA "."
+	define XC_DATA "$!HOME/data"
+	#define XC_DATA "/home/gfossati/Science/Xuhui/paper_MC/xc_data"
+
+	echo "------------------------------"
+	echo "Simulation cases: "
+	systemcall find $XC_DATA -mindepth 1 -type d -printf '   = %f\\n' | egrep -v 'lightcurves|SM_macro|observ' | sort 
+	echo "------------------------------"
+
+	#DEL# echo "  * bs_old "
+	#DEL# echo "  * bs_new_50 "
+	#DEL# echo "  * bs_new_2e4 "
+	#DEL# echo "  * std_old "
+	#DEL# echo "  * std_new_50 "
+	#DEL# echo "  * std_new_8e4 "
+	#DEL# echo "  * fg_old " 
+	#DEL# echo "  * fg_new " 
+	#DEL# echo " "
+
+	define which_sim ? < Simulation directory name [e.g. bs_new_50] : > 
+	#DEL# define flag_zoom ? { >>>> Full or zoomed [0|1] : }
+
+	define SIMDIR $which_sim
+
+	define flag_fg_case (0)
+	define flag_ext     (0)
+
+	# defining also 'sim_case' for legacy issues, and to play it safe.
+	if( substr('$which_sim',0,2) == 'st' ) { 
+	   define sim_case (1)
+           # define data_time_shift ( 7.0)
+	}
+	if( substr('$which_sim',0,2) == 'fg' ) { 
+	   define sim_case (2)
+	   define flag_fg_case (1)
+           # define data_time_shift ( 8.0)
+	} 
+	if( substr('$which_sim',0,2) == 'bs' ) { 
+	   define sim_case (3)
+           # define data_time_shift (14.0)
+	}
+	if( substr('$which_sim',0,2) == 'te' ) { 
+	   define sim_case (4)
+           # define data_time_shift (10.0)
+	}
+        if( substr('$which_sim',0,2) == 'ex' ) {
+           define sim_case (5)
+           define flag_ext (1)
+        } 
+	if( substr('$which_sim',0,3) == 'hda' ) { 
+	   define sim_case (21)
+        }
+	if( substr('$which_sim',0,3) == 'hdb' ) { 
+	   define sim_case (22)
+        }
+	if( substr('$which_sim',0,3) == 'hdc' ) { 
+	   define sim_case (23)
+	   # define flag_fg_case (1)
+           # define data_time_shift (14.0) 
+	}
+        if( substr('$which_sim',0,3) == 'hdd' ) {
+           define sim_case (24)
+        }
+
+	# Sets times for SEDs to plot
+        if( $sim_case == 1 ) { set times_for_seds = < 1  8 16 22 > }
+        if( $sim_case == 2 ) { set times_for_seds = < 1  8 16 22 > }
+        if( $sim_case == 3 ) { set times_for_seds = < 1 13 20 25 > }
+        if( $sim_case == 4 ) { set times_for_seds = < 1  8 15 22 > }
+        if( $sim_case == 5 ) { set times_for_seds = < 3  12 21 30 > }
+        #if( $sim_case == 5 ) { set times_for_seds = < 1  3 5 7 > }
+        if( $sim_case == 23 ) { set times_for_seds = < 1  8 16 22 > }
+        if( $sim_case == 21 ) { set times_for_seds = < 1  7 15 21 > }
+	if( $sim_case == 22 ) { set times_for_seds = < 1  6 14 20 > }
+        if( $sim_case == 24 ) { set times_for_seds = < 1  3 11 17 > }
+	set times_for_seds = times_for_seds + 1
+
+        define surf_421  54.337
+        define surf_1510 56.42
+
+#---------------------------------------------------------------------
+# plot_sp : plots the energy spectra for the compton2d code
+plot_sp 
+
+        # device postencap sp1.eps
+
+	reset_graph
+
+        lweight 4
+
+	#GF# ??? data ???
+        read < x 1 y 2 >
+        set lx = lg(x) + 3
+        set ly = lg(x*y)
+
+        vecminmax ly min max
+        define min ($max - 7.0)
+        define max ($max + 1.0)
+
+        limits (lx) $min $max
+        ticksize 0.5 2 0.5 1
+        box 4 2 1 4
+
+        histogram lx ly
+
+        ctype 0
+        set lx = lx + 14.384
+        limits lx $min $max
+        ticksize 0.5 2 0 0
+        box 1 3 3 3
+
+        #data output_top13.da
+        read < xx 1 yy 2 >
+        ctype 3
+        connect xx yy
+        ctype 0
+
+#---------------------------------------------------------------------
+# plot_spratio: plot the SED ratio between our code and C&G99.
+plot_spratio 
+
+	#GF# ??? data ???
+        read < x 1 y 2 >
+        set lx = lg(x)
+        set ly = lg(x*y)
+
+	#GF# ??? What do you intend to do with this weird 'box' command with y-limits 0,0 ???
+        define min (0)
+        define max (0)
+        lweight 4
+        limits (lx) $min $max
+        ticksize 0.5 2 -1 10
+        box 1 3 3 0
+
+        set lx = lx + 17.384
+        ticksize 0.5 2 0 0
+
+	# Chiaberge & Ghisellini SED
+        data output_top13.da
+        read < xx 1 yy 2 >
+        set dimen(lyy)  = dimen(lx)
+        set dimen(ratio)= dimen(lx)
+        set i = 0
+        do ic=0,49 {
+            set lyy[i] = 0
+            set j = 0
+            while {xx[j]<lx[i+1] && j<399}{
+                if( xx[j]>=lx[i] & yy[j]> lyy[i] ){ set lyy[i]= yy[j] }
+                set j = j+1
+            }
+            set ratio[i] = (10**lyy[i]-10**ly[i])/(10**lyy[i]+10**ly[i])*2
+            if( ratio[i]>1.5 || ratio[i]<-1.5 ){ set ratio[i] = 0 }
+            set ratio[i+1]=ratio[i]
+            set i=i+2
+        }
+        vecminmax ratio min max
+        define min ($min-0.01)
+        define max ($max+0.01)
+        limits (lx) $min $max
+        box 3 2 1 3
+
+        connect lx ratio
+        ctype 0
+#---------------------------------------------------------------------
+# plot_spt : plot SEDs for the compton2d code
+plot_spt 
+
+         #device postencap sed.eps
+
+        # LOCATION $gx1 $($gx2-1200) $gy1 $($gy2-1000)
+
+	reset_graph   # SETTING LOCATION AT: 5500 30000 5500 30000
+	# location  5500 30000 4500 30000
+	# location  4500 31000 3500 31000
+
+        location 4500 27500 7500 28000
+
+	# set_read_sim_xc
+	set_read_sim_gf
+	define flag_zoom ? { >>>> Full or zoomed [0|1] : }
+
+	# data sp01_evt.dat
+	if( $flag_zoom ) { 
+	   data "$!XC_DATA/$!SIMDIR/sed30_zoom.dat"
+           device postencap '$which_sim'_sed_zoom.eps
+	} else { 
+	#   data "$!XC_DATA/$!SIMDIR/sed30.dat"
+           data "sed30.dat"
+           device postencap '$which_sim'_sed.eps
+	}
+
+        read < x 1 y1 $(times_for_seds[0]) y2 $(times_for_seds[1]) y3 $(times_for_seds[2]) y4 $(times_for_seds[3]) >
+        define t0     read 1 2
+        define tmax   read 1 3
+        define dt     read 1 5
+        define sed_scaling_factor read 3 2   #GF# NEW
+
+	echo ">*** Parameters read from data file ***"
+	echo ">  t0                 : "$t0
+	echo ">  tmax               : "$tmax
+	echo ">  dt                 : "$dt
+	echo ">  SED scaling factor : "$sed_scaling_factor
+
+        # define sed_scaling_factor ? < SED scaling factor : >
+
+	set y1 = y1/$sed_scaling_factor
+	set y2 = y2/$sed_scaling_factor
+	set y3 = y3/$sed_scaling_factor
+        set y4 = y4/$sed_scaling_factor
+        
+	# used for labels 
+        define time11 ( int(($t0 + $dt*(times_for_seds[0]-1.))/1000.) )
+        define time12 ( int(($t0 + $dt* times_for_seds[0]    )/1000.) )
+        define time21 ( int(($t0 + $dt*(times_for_seds[1]-1.))/1000.) )
+        define time22 ( int(($t0 + $dt* times_for_seds[1]    )/1000.) )
+        define time31 ( int(($t0 + $dt*(times_for_seds[2]-1.))/1000.) )
+        define time32 ( int(($t0 + $dt* times_for_seds[2]    )/1000.) )
+        define time41 ( int(($t0 + $dt*(times_for_seds[3]-1.))/1000.) )
+        define time42 ( int(($t0 + $dt* times_for_seds[3]    )/1000.) )
+
+        #DEL# define time11 ( int(($t0 + $dt*($tbin1-1.))/1000.) )
+        #DEL# define time12 ( int(($t0 + $dt* $tbin1    )/1000.) )
+        #DEL# define time21 ( int(($t0 + $dt*($tbin2-1.))/1000.) )
+        #DEL# define time22 ( int(($t0 + $dt* $tbin2    )/1000.) )
+        #DEL# define time31 ( int(($t0 + $dt*($tbin3-1.))/1000.) )
+        #DEL# define time32 ( int(($t0 + $dt* $tbin3    )/1000.) )
+        #DEL# define time41 ( int(($t0 + $dt*($tbin4-1.))/1000.) )
+        #DEL# define time42 ( int(($t0 + $dt* $tbin4    )/1000.) )
+      
+	#-------------------------------------------------
+	# Additional SED components
+	#-------------------------------------------------
+
+	# separate foreground SED
+	#DEL# if( $sim_case == 2 || $sim_case == 6 ) 
+	if( $flag_fg_case ) { 
+           if( $flag_zoom ) { 
+              data "$!XC_DATA/$!SIMDIR/sed_zoom_fg.dat"
+           } else { 
+              # data sp01_fg.dat
+              data "$!XC_DATA/$!SIMDIR/sed_fg.dat"
+           }
+           read < fg 2 >
+           define fg_scaling_factor read 3 2   #GF# NEW
+	   echo ">*** Parameters read from data file ***"
+	   echo "> SED FG scaling factor : "$fg_scaling_factor
+
+           set y1  = y1 + fg/$fg_scaling_factor
+           set y2  = y2 + fg/$fg_scaling_factor
+           set y3  = y3 + fg/$fg_scaling_factor
+           set y4  = y4 + fg/$fg_scaling_factor
+           set lfg = lg(x*fg/$fg_scaling_factor)
+           smooth lfg lfg_5 5
+        }
+     
+	# black body SED
+        #DEL# if( $sim_case == 5 ) 
+         if( $flag_ext ) { 
+           # data blackbody.in
+           #data "$!XC_DATA/$!SIMDIR/blackbody.in"
+           data "blackbody.in"
+           read < xfg 1 fg0 2 >
+
+           set lx   = lg(x)
+           set lxfg = lg(xfg)
+           interp2 lxfg fg0 lx fg
+           set y1 = y1 + fg
+           set y2 = y2 + fg
+           set y3 = y3 + fg
+           set y4 = y4 + fg
+           set lfg = lg(x*fg)
+           smooth lfg lfg_5 5
+        }
+	#-------------------------------------------------
+        
+	#-------------------------------------------------
+	# Converting into nFn and smoothing
+	#-------------------------------------------------
+        set lx  = lg(x) + 3
+        set ly1 = lg(x*y1)
+        set ly2 = lg(x*y2)
+        set ly3 = lg(x*y3)
+        set ly4 = lg(x*y4)
+        smooth ly1 ly1_5 5 
+        smooth ly2 ly2_5 5
+        smooth ly3 ly3_5 5
+        smooth ly4 ly4_5 5
+
+	#-------------------------------------------------
+        #DEL# if( $sim_case == 5 ) 
+        if( $flag_ext ) {
+           define vmin  9.8
+           define vmax 25.4
+           define min  43.4
+           define max  48.0
+        } else {
+           if( $flag_zoom ) { 
+              define vmin 16.8
+              define vmax 19.2
+              define min  43.1
+              define max  45.9
+           } else { 
+              define vmin 12.8
+              define vmax 28.4
+              define min  42.2 #42.6
+              define max  45.8 #46.2
+           }
+	}
+
+	#-------------------------------------------------
+        lweight 3
+        expand 1.5
+	ltype 0 
+	ctype 2
+
+	#-------------------------------------------------
+        # plot the axes in frequency (bottom) and flux (right) 
+	#
+        #DEL# if( $sim_case ==5 ) 
+        if( $flag_ext ) {
+            limits $vmin $vmax $($min-$surf_1510) $($max-$surf_1510)
+        } else {
+	    limits $vmin $vmax $($min-$surf_421) $($max-$surf_421)
+        }
+	if( $flag_zoom ) { 
+           ticksize 0.2 1 0.2 1 
+	} else { 
+           ticksize 1 3 0 0
+	}
+        box 1 4 4 2
+        xlabel "log(\nu) [Hz]"
+	relocate ( $($gx2 + 3500) $(($gy1+$gy2)/2.) )
+	angle -90
+        putlabel 5 "log(\nu F_\nu) [erg s^{-1} cm^{-2}]"
+	angle 0
+
+	#-------------------------------------------------
+        # plot the data points
+        # define min $($min-2)
+        limits $fx1 $fx2 $min $max
+
+        #DEL# if( $sim_case == 5 ) 
+        if( $flag_ext ) {
+           #plot_ned_1510_data
+           plot_at_1510_data
+        } else {  
+           plot_ned_data
+           plot_jb_mw_data
+           plot_gf_mw_data
+           plot_new_data
+        }
+
+	#-------------------------------------------------
+	# this dealing with limits for labeling is ugly... TO EDIT
+
+	#-------------------------------------------------
+        # plot the xlabel in eV (top) and ylabel in Luminosity (left)
+	#
+        limits $($vmin-14.384) $($vmax-14.384) $min $max
+	if( $flag_zoom ) { 
+           # plot X-ray label in keV instead of eV
+           limits $($vmin-17.384) $($vmax-17.384) $min $max
+           ticksize -1 10 0.2 1
+	} else { 
+           ticksize  1  3 0.2 1
+	}
+	ctype 2 
+	ltype 0
+        lweight 3 
+	expand 1.5
+        box 4 2 1 4
+        ylabel "log(\nu L_\nu) [erg s^{-1}]"
+
+        limits $($vmin-14.384) $($vmax-14.384) $min $max
+
+	relocate ( $(($gx1+$gx2)/2.)  $($gy2+2000) )
+	if( $flag_zoom == 1 ) { 
+           putlabel 5 "E [keV]"
+	} else { 
+           putlabel 5 "log(E) [eV]"
+	}
+
+        #LTYPE 1
+        #DEL# if( $sim_case == 2 ) 
+        if( $flag_fg_case || $flag_ext ) {
+            ctype 6 histogram lx ly1_5 if( lx > lx[2] )
+	}
+        #ctype 6 histogram lx ly1_5 if( lx > lx[2] )
+	ctype 2 histogram lx ly2_5 if( lx > lx[2] )
+        ctype 3 histogram lx ly3_5 if( lx > lx[2] )
+        ctype 4 histogram lx ly4_5 if( lx > lx[2] )
+
+        ctype 7
+        ltype 2
+        # histogram lx lfg_5
+        ctype 0
+        ltype 0
+
+	#-------------------------------------------------
+	# Time intervals legend
+        expand 1.2
+	define dgy (1000)
+	#DEL# if( $flag_zoom <= 1 && $sim_case!=5 ) 
+	if( $flag_zoom <= 1 && $flag_ext == 0 ) {
+           # ctype 6 relocate ($($gx1+1000) $($gy1 + 1500 + (4 - 1)*$dgy) ) putlabel 6 t= $time41-$time42 ks
+           ctype 2 relocate ($($gx1+1000) $($gy1 + 1500 + (4 - 2)*$dgy) ) putlabel 6 t= $time21-$time22 ks
+	   ctype 3 relocate ($($gx1+1000) $($gy1 + 1500 + (4 - 3)*$dgy) ) putlabel 6 t= $time31-$time32 ks
+           ctype 4 relocate ($($gx1+1000) $($gy1 + 1500 + (4 - 4)*$dgy) ) putlabel 6 t= $time41-$time42 ks
+
+	} else {
+           ctype 2 relocate ($($gx1+1000) $($gy2 + 800 - 3*$dgy) ) putlabel 6 t= $time21-$time22 ks
+	   ctype 3 relocate ($($gx1+1000) $($gy2 + 800 - 4*$dgy) ) putlabel 6 t= $time31-$time32 ks
+           ctype 5 relocate ($($gx1+1000) $($gy2 + 800 - 5*$dgy) ) putlabel 6 t= $time41-$time42 ks
+           ctype 6 relocate ($($gx1+1000) $($gy2 + 800 - 2*$dgy) ) putlabel 6 t= $time11-$time12 ks
+
+	   #DEL# ctype 2 relocate ($($gx2-1000) $($gy2-400-1*$dgy)) putlabel 4 t= $time21-$time22 ks
+           #DEL# ctype 3 relocate ($($gx2-1000) $($gy2-400-2*$dgy)) putlabel 4 t= $time31-$time32 ks
+           #DEL# ctype 4 relocate ($($gx2-1000) $($gy2-400-3*$dgy)) putlabel 4 t= $time41-$time42 ks
+           #DEL# # ctype 6 relocate ($($gx2-1000) $($gy2-400-4*$dgy)) putlabel 4 t= $time41-$time42 ks
+
+	}
+        ctype 0
+        expand 1.5
+
+#---------------------------------------------------------------------
+# plot_ff : VHE flux vs. X-ray flux plot
+plot_ff 
+
+        #DEL# data lc07_ev0.dat
+        #device postencap ff.eps
+
+	reset_graph
+
+        #DEL# location 4500 27500 7500 28000
+	#GF#??? WHAT IS THIS "RANDOM" CHANGE OF LOCATION?
+	#GF# shifting the left axis by 1000 each time you run it?!
+
+        lweight 4
+        expand 1.5
+	ltype 0 
+	ctype 2 
+
+	# set_read_sim_xc
+	set_read_sim_gf
+
+        device postencap '$which_sim'_ff.eps
+
+        define xband ? < X-ray band, [1] 2-4 keV or [2] 2-10 keV: >
+
+        if( $xband == 1 ){
+           # data "$!XC_DATA/$!SIMDIR/lc07_ev0.dat"
+           data "lc07_ev0.dat"
+        } else {
+           # data "$!XC_DATA/$!SIMDIR/lc07_2_10.dat"
+           data "lc07_2_10.dat"
+	}
+        read < x 1 y1 2 y2 3 y3 4 y4 5 y5 6 y6 7 y7 8 >
+        define lum_scaling_factor read 9 2   #GF# NEW
+	echo ">*** Parameters read from data file ***"
+	echo "> Luminosity scaling factor : "$lum_scaling_factor
+        set y2 = y2/$lum_scaling_factor
+        set y7 = y7/$lum_scaling_factor
+
+	do 8=1,7 {
+	   do 9=1,2 {
+	       define 7 $($9+2)
+	       define range$8$9 read $8 $7 
+	   }
+	}
+
+
+	do 8=1,7 {
+	   do 9=1,2 {
+	       define 6 "units$8$9"
+	       define 7 "range$8$9"
+
+	       define $7 $(1e0*$$7)  
+	       define $6 "keV"
+
+	       if( $$7 <  1.0e-2 ) { 
+	          define $7 $(1e3*$$7)  
+		  define $6 "eV"
+	       }
+	       if( $$7 >= 1.0e5 && $$7 < 1.0e8 ) { 
+	          define $7 $(1e-6*$$7)
+		  define $6 "GeV"
+	       }
+	       if( $$7 >= 1.0e8  ) { 
+	          define $7 $(1e-9*$$7)
+		  define $6 "TeV"
+	       }
+	   }
+	}
+
+        
+        #DEL# if( $sim_case == 2 ) 
+        if( $flag_fg_case ) {
+           if( $xband == 1 ) {
+              data "$!XC_DATA/$!SIMDIR/lc07_fg.dat"
+           } else {
+              data "$!XC_DATA/$!SIMDIR/lc07_2_10_fg.dat" 
+	   }
+           read < fg1 2 fg2 3 fg3 4 fg4 5 fg5 6 fg6 7 fg7 8 >
+           define fg_scaling_factor read 9 2   #GF# NEW
+	   echo ">*** Parameters read from data file ***"
+	   echo ">  LC FG scaling factor : "$fg_scaling_factor
+	   do 9=1,7 {
+	      define fg$9  $( fg$9[0]/$fg_scaling_factor )
+	   }
+
+           set y2 = y2 + $fg2
+           set y7 = y7 + $fg7
+        }
+        
+        #DEL# set x  = x/10000.  #GF# Why divided by 10ks?
+        set x  = x/1000.
+        set y2 = y2
+        set y7 = y7
+	do 8=1,7 {
+           set ly$8 = lg(y$8)
+	}
+
+        smooth ly7 ly7_5 5
+        set ly2   = ly2   - $surf_421
+        set ly7_5 = ly7_5 - $surf_421
+
+        vecminmax ly2   xmin xmax
+        vecminmax ly7_5 ymin ymax
+        define xr1 $($xmax-1.0)
+        define xr2 $($xmax+0.2)
+        define yr1 $($ymax-1.0)
+        define yr2 $($ymax+0.2)
+        limits $xr1 $xr2 $yr1 $yr2
+	lweight 3 
+        box
+        xlabel log(\\nu F_\\nu) at [$range21 $units21 - $range22 $units22]
+        ylabel log(\\nu F_\\nu) at [$range71 $units71 - $range72 $units72]
+
+	echo "-------------------------------------------------------------"
+	echo ">*** Data Time Shift *** " 
+        echo ">  favorite value for FG  :  7.0"
+        echo ">  favorite value for STD :  6.5 (8.0)"
+        echo ">  favorite value for BS  : 14.0"
+	echo ">  favorite value for hdb : 10.0"
+	echo ">  favorite value for hdc : 27.0"
+        echo ">  favorite value for hdd : 23.0"
+	echo ">  Note: actual march 19 flare peak time is at around 30 ks " 
+	define data_time_shift ? {   >>> Time shift for data : }
+
+        ptype 4 3
+        define model 2   ## define 'model'
+        if( $model == 4 ) {
+           lweight 3
+	   ctype 2 connect ly2 ly7_5   if(x<=10)
+           ctype 3 connect ly2 ly7_5   if(x> 9.7 && x<=12)
+           ctype 4 connect ly2 ly7_5   if(x>11.7 && x<=14)
+           ctype 5 connect ly2 ly7_5   if(x>13.7 && x<=16)
+           ctype 6 connect ly2 ly7_5   if(x>15.7 && x<=18)
+           ctype 7 connect ly2 ly7_5   if(x>17.7 && x<=20)
+           ctype 8 connect ly2 ly7_5   if(x>20)
+	   ctype 2 
+	   ptype 4 0 
+           points  ly2 ly7_5 if(x > 8 &&  x < 22)
+        } else {
+           # connect ly3 ly7
+	   define xref $( 30 + $data_time_shift )  
+           lweight 3 ctype 2 connect ly2 ly7_5 if(                              x<= $($xref - 10*2) ) 
+           lweight 3 ctype 4 connect ly2 ly7_5 if( x > $($xref - 10*2 - 0.7) && x<= $($xref - 10*1) )
+           lweight 7 ctype 3 connect ly2 ly7_5 if( x > $($xref - 10*1 - 0.7) && x<= $($xref - 10*0) )
+           lweight 7 ctype 5 connect ly2 ly7_5 if( x > $($xref - 10*0 - 0.7) && x<= $($xref + 10*1) )
+           lweight 3 ctype 6 connect ly2 ly7_5 if( x > $($xref + 10*1 - 0.7) && x<= $($xref + 10*2) )
+           lweight 3 ctype 7 connect ly2 ly7_5 if( x > $($xref + 10*2 - 0.7) && x<= $($xref + 10*3) )
+           lweight 3 ctype 8 connect ly2 ly7_5 if( x > $($xref + 10*3 - 0.7) )
+
+           #GF# lweight 3 ctype 2 connect ly2 ly7_5 if(x<=1.43)
+           #GF# lweight 3 ctype 4 connect ly2 ly7_5 if(x>1.43 && x<=2.5)
+           #GF# lweight 7 ctype 3 connect ly2 ly7_5 if(x>2.43 && x<=3.5)
+           #GF# lweight 7 ctype 5 connect ly2 ly7_5 if(x>3.43 && x<=4.5)
+           #GF# lweight 3 ctype 6 connect ly2 ly7_5 if(x>4.43 && x<=5.5)
+           #GF# lweight 3 ctype 7 connect ly2 ly7_5 if(x>5.43 && x<=6.5)
+           #GF# lweight 3 ctype 8 connect ly2 ly7_5 if(x>6.43)
+           # connect ly2 ly7_5 if(x>7.5)
+	   ctype 2 
+	   ptype 4 0 
+	   expand 1
+           points  ly2 ly7_5   if(x>$xref-30 && x < $xref+40 )
+	   expand 1.5
+        }
+
+	#-----------------------------------------------------------
+	# Trend lines and label
+        lweight 4
+	ctype grey59
+
+        set linex=<$xr1 $xr2>
+        set liney=<$yr1 $yr2>
+        lweight 4
+        ltype 2
+        connect linex liney
+        lweight 3
+	ltype 0 
+        relocate ( $($gx2 - 2500) $( $gy2 - 1500) ) putlabel 4 "1.0"
+
+        set linex=<$xr1 $(($xr1+$xr2)/2)>
+        set liney=<$yr1 $yr2>
+        lweight 4
+        ltype 2
+        connect linex liney
+        lweight 3
+	ltype 0 
+        relocate ( $($gx2 - 1500) $( 0.5*($gy1+$gy2) - 2500) ) putlabel 4 "0.5"
+
+        set linex=<$xr1 $xr2>
+        set liney=<$yr1 $(($yr1+$yr2)/2)>
+        lweight 4
+        ltype 2
+        connect linex liney
+        lweight 3
+	ltype 0 
+        relocate ( $( 0.5*($gx1+$gx2) - 1500) $( $gy2 - 1500) ) putlabel 4 "2.0"
+	#-----------------------------------------------------------
+
+	#-----------------------------------------------------------
+	# real data
+	expand 1
+        define name "SAVE_x_and_tev_tev01_wrbr_hfreb2_pca_5_23_32"
+        plot_ff_tev
+	expand 1.5
+
+        ctype 0
+        
+#---------------------------------------------------------------------
+# hard_t : use the table of SED to produce a peak energy vs time table
+hard_t  
+
+        # device postencap hard_t01.eps
+        
+        define t0   read 1 2
+        define tmax read 1 3
+        define dt   read 1 5
+        define nt ($($tmax-$t0)/$dt)
+        define nt (int($nt))
+
+        # lines 1 195
+        read < x 1 >
+        set lx = lg(x)
+        set dimen(time) = $nt
+        set dimen(hard) = $nt
+        set dimen(flux1) = $nt
+        define i 0
+        echo " here nt = "$nt
+        do i=0,($nt-1) {
+        echo " here i = "$i
+        read y $($i+2)
+        #set y = y+fg
+        set ly = lg(x*y)
+        define min 0
+        define max 0
+        vecminmax ly min max
+        define fl1 0
+        define fl2 0
+        define j 0
+        while{x[$j]<2 && $j<194}{
+	   define j ($j+1)
+	}
+        define j2 $j
+        while{x[$j2]<4 && $j2<194}{
+           define fl1 ($fl1+y[$j2]*(x[$j2]-x[$j2-1]))
+           define j2 ($j2+1)
+        }
+        define k $j2
+        while{x[$k]<9 && $k<194}{define k ($k+1)}
+        define k2 $k
+        while{x[$k2]<15 && $k2<194}{
+        define fl2 ($fl2+y[$k2]*(x[$k2]-x[$k2-1]))
+        define k2 ($k2+1)
+        }
+        set hard[$i] = $fl2/$fl1
+        set flux1[$i]= lg($fl1)
+        set time[$i] = $t0+$dt*($i-0.5)
+        }
+        print hard_t01.dat '%14.7e %14.7e %14.7e\n' {time hard flux1}
+
+#-------------------------------------------------------------------------------
+# plot_hf
+plot_hf
+
+      # device postencap hard_flux.eps
+
+      data hard_t01.dat
+      read < x 1 y 2 z 3 >
+
+      define begintime 50000 #20000 #50000
+      define endtime  100000 #50000 #100000
+      set time = x if(x> $begintime && x<$endtime)
+      set hard = y if(x> $begintime && x<$endtime)
+      set flux = z if(x> $begintime && x<$endtime)
+      set flux = flux - $surf_421
+
+      #DEL# lweight 3
+      #DEL# expand 1.5
+      #DEL# ctype 2 
+      #DEL# location 4500 27500 7500 28000
+      reset_graph
+
+      limits flux hard
+      box
+      xlabel "Flux [2-4 keV]"
+      ylabel "Hardness Ratio [9-15 keV/2-4 keV]"
+
+      ctype 2 
+      connect flux hard
+      ctype 3
+      connect flux hard if(time > 75000)
+      ctype 2
+      
+
+#---------------------------------------------------------------------
+# plot_ht : plot peak vs time
+plot_ht 
+
+        device postencap hard_t01.eps
+	reset_graph
+
+        #DEL# LOCATION $($gx1 + 500) $gx2 $gy1 $gy2
+
+	#GF# ??? data ???
+        read < t 1 s 2 >
+        set ls = lg(s)
+        set t = t/1000.0
+
+        lweight 3
+        expand 1.5
+        limits t s
+        ticksize 0 0 0 0
+        box
+        xlabel "Time [ks]"
+        ylabel "Hardness Ratio [F_{6-10 keV}/F_{2-4 keV}]"
+
+	lweight 4 
+	ctype 3 
+        connect t s
+	ctype 2 
+	lweight 3
+
+#---------------------------------------------------------------------
+# plot_lc7 : plot the light curve for the compton2d code
+plot_lc7 
+
+	lweight 3 
+	ctype 2 
+	ltype 0 
+	expand 1.5
+
+        #device postencap lc5.eps
+
+	# set_read_sim_xc
+	set_read_sim_gf
+
+        device postencap '$which_sim'_lc5.eps
+       
+	# Setting default colors 
+	define col_lc1  "green3"        # optical
+	define col_lc2  "grey1"         # soft X-ray
+	define col_lc3  "red2"          # hard X-ray
+	define col_lc4  "green"
+	define col_lc5  "blue"
+	define col_lc6  "darkorange1"   # Fermi
+	define col_lc7  "grey1"         # TeV
+	define col_data "blue"          # data
+
+        define tev14hs 0
+
+	reset_graph   # SETTING LOCATION AT: 5500 30000 5500 30000
+	 location  5500 30000 4500 30000
+	# location  4500 31000 3500 31000
+
+        #LOCATION $($gx1 + 500) $gx2 $gy1 $gy2
+	#GF#??? WHAT IS THIS "RANDOM" CHANGE OF LOCATION?
+	#GF# shifting the left axis by 1000 each time you run it?!
+
+        #DEL# echo "------------------------------"
+        #DEL# echo "Simulation cases: "
+        #DEL# echo "   [1] standard "
+        #DEL# echo "   [2] empty + foreground "
+        #DEL# echo "   [3] better SED "
+        #DEL# echo "   [4] test "
+        #DEL# echo "   [5] red blazar "       
+        #DEL# echo "   [6] hard lag + fg"
+        #DEL# define sim_case ?  < >>>>           Which case : >
+        #DEL# 
+        #DEL# if( $sim_case == 1 ) { define SIMDIR "std" }
+        #DEL# if( $sim_case == 2 ) { define SIMDIR "fg" }
+        #DEL# if( $sim_case == 3 ) { define SIMDIR "better_sed" }
+        #DEL# if( $sim_case == 4 ) { define SIMDIR "test" }
+        #DEL# if( $sim_case == 5 ) { define SIMDIR "red" }
+        #DEL# if( $sim_case == 6 ) { define SIMDIR "hdc" }
+
+        #data "$!XC_DATA/$!SIMDIR/lc07_ev0.dat"
+        data "lc07_ev0.dat"
+        read < x 1 y1 2 y2 3 y3 4 y4 5 y5 6 y6 7 y7 8 >
+        define lum_scaling_factor read 9 2   #GF# NEW
+	echo ">*** Parameters read from data file ***"
+	echo "> LC FG scaling factor : "$fg_scaling_factor
+        #define lum_scaling_factor ? { >>> Luminosity scaling factor : }
+
+	#if( $flag_fg_case ) { 
+	   do 9=1,7 {
+	      # set y$9 = y$9/3.
+	      set y$9 = y$9/$lum_scaling_factor
+  	   }
+	#}
+
+	do 8=1,7 {
+	   do 9=1,2 {
+	       define 7 $($9+2)
+	       define range$8$9 read $8 $7 
+	   }
+	}
+
+        set dimen(rge1) = 8
+        set dimen(rge2) = 8
+        set rge1[0] = 10
+        set rge2[0] = 10
+        do 9=1,2{
+           do 8=1,7{
+              set rge$9[$8] = $range$8$9
+           }
+        }
+
+	do 8=1,7 {
+	   do 9=1,2 {
+	       define 6 "units$8$9"
+	       define 7 "range$8$9"
+
+	       define $6 "keV"
+	       define $7 $(1e0*$$7)  
+
+	       if( $$7 <  1.0e-2 ) { 
+	          define $7 $(1e3*$$7)  
+		  define $6 "eV"
+	       }
+               if( $$7 >= 1.0e3 && $$7 < 1.0e5 ) {
+                  define $7 $(1e-3*$$7)
+                  define $6 "MeV"
+               }
+	       if( $$7 >= 1.0e5 && $$7 < 1.0e8 ) { 
+	          define $7 $(1e-6*$$7)
+		  define $6 "GeV"
+	       }
+	       if( $$7 >= 1.0e8  ) { 
+	          define $7 $(1e-9*$$7)
+		  define $6 "TeV"
+	       }
+	   }
+	}
+
+        if( $flag_fg_case ) {
+           data "$!XC_DATA/$!SIMDIR/lc07_fg.dat"
+           read < fg1 2 fg2 3 fg3 4 fg4 5 fg5 6 fg6 7 fg7 8 >
+           define fg_scaling_factor read 9 2   #GF# NEW
+	   echo ">*** Parameters read from data file ***"
+	   echo "> LC FG scaling factor : "$fg_scaling_factor
+           # define fg_scaling_factor ? { >>> FG Luminosity scaling factor : }
+	   do 9=1,7 {
+	      # set fg$9 = fg$9/$fg_scaling_factor
+	      # set y$9 = y$9 + fg$9[0]
+	      define fg$9  $( fg$9[0]/$fg_scaling_factor )
+	      set y$9 = y$9 + $fg$9
+	   }
+        }
+
+        if( $flag_ext ) { 
+           #data "$!XC_DATA/$!SIMDIR/blackbody.in"
+           data "blackbody.in"
+           read < xdk 1 sp0 2 >
+
+           set lxdk = lg(xdk)
+           set lrge1=lg(rge1)
+           set lrge2=lg(rge2)
+           interp2 lxdk sp0 lrge1 sp1
+           interp2 lxdk sp0 lrge2 sp2
+
+           do 9=1,7{
+            define dk$9 0
+            define i 1
+            while {xdk[$i] < rge2[$9]}{
+              if (xdk[$i]>rge1[$9] && xdk[$i-1]<rge1[$9]){
+                define dk$9 $($dk$9+(xdk[$i]-rge1[$9])*(sp0[$i]*sp1[$9])**0.5)
+              }
+              if (xdk[$i-1]>rge1[$9]){
+                define dk$9 $($dk$9+(xdk[$i]-xdk[$($i-1)])*(sp0[$i]*sp0[$($i-1)])**0.5)
+              }
+            define i $($i+1)
+            }
+            define dk$9 $($dk$9+(rge2[$9]-xdk[$($i-1)])*(sp2[$9]*sp0[$($i-1)])**0.5)
+
+            set y$9 = y$9 + $dk$9
+           }
+        }
+
+        set x = x/1000.0
+	do 9=1,7 { 
+	   set ly$9 = lg(y$9)
+	}
+
+	define smoothing_band_6 (5)
+	define smoothing_band_7 (5)
+	define smoothing_band_6 (1)
+	define smoothing_band_7 (1)
+	echo "> Smoothing by : "$smoothing_band_6 $smoothing_band_7
+        smooth ly6 ly6_5 $smoothing_band_6
+        smooth ly7 ly7_5 $smoothing_band_7
+
+        define min (0)
+        define max (0)
+
+        #if( substr('$which_sim',0,2 ) == 'te' ){
+	#set dimen(ly7_shift) = dimen(ly7_5)
+	#set lyi = 0,89
+	#set ly7_shift[10,99]=ly7_5[lyi]
+	#set ly7_shift[0,9]=0
+	#set ly1 = ly7_5+ly7_shift
+	#}
+	foreach 9 < 1 2 3 4 5 6_5 7_5 > {
+           vecminmax ly$9 min max
+           set ly$9 = ly$9 - $max
+	    
+	}
+        #DEL# vecminmax ly1 min max
+        #DEL# set ly1 = (ly1-$max)
+        #DEL# vecminmax ly2 min max
+        #DEL# set ly2 = (ly2-$max)
+        #DEL# vecminmax ly3 min max
+        #DEL# set ly3 = (ly3-$max)
+        #DEL# vecminmax ly4 min max
+        #DEL# set ly4 = (ly4-$max)
+        #DEL# vecminmax ly5 min max
+        #DEL# set ly5 = (ly5-$max)
+        #DEL# vecminmax ly6 min max
+        #DEL# set ly6_5 = (ly6_5-$max)
+        #DEL# vecminmax ly7_5 min max
+        #DEL# set ly7_5 = (ly7_5-$max)
+
+	#-------------------------------------------------
+	# Plotting inbox labels for energy bands
+	#GF# the labels' plotting should be moved within each 'window' section
+	#-------------------------------------------------
+        # lweight 4
+        expand 1.2
+        
+        define dxpos 1000
+        define dypos 1000
+        define gam_sw 1
+        if( substr('$which_sim',0,2) == 'hd' ){define gam_sw 0}
+
+        if( $gam_sw == 1 ){
+
+	   define gyref $( ($gy1 + $gy2)/2.0 - 400 )
+
+	   #--- SOFT X-RAY ---
+           relocate ( $($gx1+$dxpos) $($gyref - 1*$dypos) )
+           ctype grey1
+	   ctype $col_lc2
+           putlabel 6 $range21 $units21 - $range22 $units22
+
+	   #--- HARD X-RAY ---
+           relocate ( $($gx1+$dxpos) $($gyref - 2*$dypos) )
+           ctype 3
+	   ctype $col_lc3
+           putlabel 6 $range31 $units31 - $range32 $units32
+
+           if( substr('$which_sim',0,2) == 'te' ){
+	    relocate ( $($gx1+$dxpos) $($gyref - 3*$dypos) )
+            ctype 4
+            putlabel 6 $range41 $units41 - $range42  $units42
+	    relocate ( $($gx1+$dxpos) $($gyref - 4*$dypos) )
+            ctype 5
+            putlabel 6 $range51 $units51 - $range52  $units52
+           }
+
+	   define gyref $( $gy2 - 400 )
+
+	   #--- OPTICAL ---
+           relocate ( $($gx1+$dxpos) $($gyref - 1*$dypos) ) 
+           ctype green
+	   ctype $col_lc1
+           if( $flag_ext ){
+              putlabel 6 $range51 $units51 - $range52  $units52
+           } else {
+              putlabel 6 $range11 $units11 - $range12  $units12 (Optical)
+           }
+
+	   #--- GeV ---
+           relocate ( $($gx1+$dxpos) $($gyref - 2*$dypos) ) 
+           ctype magenta
+	   ctype $col_lc6
+           if( $flag_ext ){
+              putlabel 6 $range61 $units61 - $range62 $units62
+           } else {
+              putlabel 6 $range61 $units61 - $range62 $units62 (Fermi)
+           }
+
+	   #--- TeV ---
+           relocate ( $($gx1+$dxpos) $($gyref - 3*$dypos) ) 
+           ctype grey1
+	   ctype $col_lc7
+           putlabel 6 $range71 $units71 - $range72 $units72
+
+        } else {
+
+           relocate ($($gx1+$dxpos) $($gy2-2*$dypos)) #29500)
+           ctype grey1
+	   ctype $col_lc2
+           putlabel 6 $range21 $units21 - $range22 $units22
+
+           relocate ($($gx1+$dxpos) $($gy2-3*$dypos)) #28500)
+           ctype 3
+	   ctype $col_lc3
+           putlabel 6 $range31 $units31 - $range32 $units32
+        }
+
+        ctype 2
+	ltype 0
+        expand 1.5
+
+	#GF# define pause ? < pause.... >
+
+	#-----------------------------------------------------------
+	# Bottom panel, or only panel.
+	#-----------------------------------------------------------
+        if( $gam_sw == 1 ){
+            window 1 -2 1 1
+        } else {
+            window 1 1 1 1
+	}
+        limits (x) -1.0 0.4
+        ticksize 0 0 -1.0 5
+        box 1 2 0 0 
+        xlabel "Time [ks]"
+
+        ctype 2
+        ctype grey1
+	ctype $col_lc2
+        histogram  x ly2
+        ctype 3
+	ctype $col_lc3
+        histogram  x ly3
+         if( substr('$which_sim',0,2) == 'te' ){
+          ctype $col_lc4
+          histogram x ly4
+          ctype $col_lc5
+          histogram x ly5
+         }
+
+        define optical_sw 0
+	#GF# TO CHECK HOW IT WORKS AFTER THE "RESTRUCTURING" OF THE LABELS DONE ABOVE
+        if( $gam_sw != 1 && $optical_sw == 1 ){
+           ctype 5
+           relocate ($($gx1+$dxpos) $($gy2-4*$dypos))
+           putlabel 6 $range11 - $range12  $units12 (Optical)
+           histogram x ly1 
+        }
+
+	echo "-------------------------------------------------------------"
+	echo ">*** Data Time Shift *** " 
+        echo ">  favorite value for FG  :  7.0"
+        echo ">  favorite value for STD :  6.5 (8.0)"
+        echo ">  favorite value for BS  : 14.0"
+        echo ">  favorite value for hdd : 23.0"
+        echo ">  favorite value for hdc : 27.0"
+	echo ">  Note: actual march 19 flare peak time is at around 30 ks "
+        echo ">  Type 0 for not plotting the data" 
+	define data_time_shift ? {   >>> Time shift for data : }
+        if( $data_time_shift != 0 ) {
+        if( $flag_ext == 0 ) {
+           ctype 0
+           define name "pca_20_37_week1_256s"
+           ctype cyan
+           # plot_lc_pca
+
+           # observed light curved of 2-4 keV 
+           define name "pca_5_8_week1_256s"
+           ctype blue
+	   ctype $col_data
+           plot_lc_pca
+        } else { 
+           define data_time_shift $($data_time_shift-300)
+           define name "1510_gasp"
+           ctype blue
+           plot_lc_data
+        }}
+
+	#-----------------------------------------------------------
+	# Top panel
+	#-----------------------------------------------------------
+        if( $gam_sw == 1 ){
+
+	   ctype 2 
+           limits (x) -1.0 0.4
+           ticksize 0 0 -1.0 5
+           window 1 -2 1 2 
+           box 0 2 0 0
+
+           ctype green  
+	   ctype $col_lc1
+           if($flag_ext){
+           histogram x ly5
+           }else{
+	   histogram x ly1
+           }
+
+           ctype magenta 
+	   ctype $col_lc6
+	   histogram x ly6_5
+
+           # data lc07_ev1.dat
+           # read {x 1 y7 8}
+           # set x=x/1000
+           # set ly7 = lg(y7)
+           # vecminmax ly7 min max
+           # set ly7 = ly7-$max
+
+	   ctype grey1
+	   ctype $col_lc7
+           if( $tev14hs == 1 ){
+              data lc07_14hs.dat
+              read < x 1 y7 8 >
+              set x=x/1000.0
+
+              #DEL# if( $sim_case == 2 || $sim_case == 10 )
+              if( $flag_fg_case ) {
+                 data "$!XC_DATA/$!SIMDIR/lc07_fg.dat"
+                 read < fg1 2 fg2 3 fg3 4 fg4 5 fg5 6 fg6 7 fg7 8 >
+                 define fg_scaling_factor read 9 2   #GF# NEW
+	         echo ">*** Parameters read from data file ***"
+	         echo ">  LC FG scaling factor : "$fg_scaling_factor
+                 # define fg_scaling_factor ? { >>> FG Luminosity scaling factor : }
+	         do 9=1,7 {
+	            define fg$9 $( fg$9[0]/$fg_scaling_factor )
+	         }
+                 #DEL# define fg7 read 9 8
+                 set y7 = y7 + $fg7
+              }
+              set ly7 = lg(y7)
+              vecminmax ly7 min max
+              set ly7 = ly7 - $max
+              histogram x ly7
+           } else {
+              histogram x ly7_5
+           }
+
+           if( $data_time_shift != 0 ){
+           if( $flag_ext ==0 ) {
+              define name "SAVE_x_and_tev_tev01_wrbr_hfreb2_pca_5_23_32"
+              ctype blue
+	      ctype $col_data
+              plot_lc_tev
+           } else {
+              ctype $col_data 
+              define name "1510_fermi"
+              plot_lc_data
+           }}
+        }
+
+        ctype 2
+	ltype 0
+        expand 1.5
+        window 1 1 1 1
+        ylabel "F_\nu/F_\nu^{max}" # 1
+
+        define xp1 ($uxp + 15000)   #GF# ???
+        define yp1 ($uyp +  5000)   #GF# ???
+        angle 0
+	ctype 2 
+	ltype 0 
+
+#---------------------------------------------------------------------
+# plot_2spforconst
+plot_2spforconst
+
+        # device postencap sp2.eps
+        lweight 4
+        expand 1.5
+        location 6000 28000 4500 31000
+
+        # xlabel \raise 20800 E (eV)
+        # ylabel log(\\nu L_\\nu) [erg s^{-1}]
+
+	#---------------------------------------
+        window 1 -3 1 3
+
+        data sp01_evb.dat
+        read < x 1 y 2 > 
+        set lx = lg(x)
+        set ly = lg(x*y)
+
+        vecminmax ly min max
+        define min ($max - 2.7)
+        define max ($max + 0.3)
+
+        lweight 4
+        limits (lx) $min $max
+        # ticksize 0.5 2 0.5 1
+        # box 4 2 4 0
+        # ltype 1
+        histogram lx ly
+
+        set lx = lx + 17.384
+        limits lx $min $max
+        ticksize 1 3 0.5 1
+        box 0 2 1 0
+        xlabel "log(\nu) [Hz]"
+
+	# Chiaberge & Ghisellini SED
+        data output_top13.da
+        read < xx 1 yy 2 >
+        ctype 3
+        connect xx yy
+        ctype 0
+
+	#---------------------------------------
+        window 1 -3 1 2
+
+        data sp01_ec2.dat
+        read < x 1 y 2 >
+        set lx = lg(x)
+        set ly = lg(x*y)
+        
+        vecminmax ly min max
+        define min ($max - 2.7)
+        define max ($max + 0.3)
+        lweight 4
+        limits (lx) $min $max
+        # ticksize 0.5 2 0.5 1
+        # box 4 2 0 0
+        # ltype 1
+        histogram lx ly
+
+        set lx = lx + 17.384
+        limits lx $min $max
+        ticksize 1 3 0.5 1
+        box 0 2 0 0
+
+	# Chiaberge & Ghisellini SED
+        data output_top13.da
+        read < xx 1 yy 2 >
+        ctype 3
+        connect xx yy
+        ctype 0
+
+	#---------------------------------------
+        window 1 -3 1 2:3
+        ylabel "log(\nu L_\nu) [erg s^{-1}]"
+
+	#---------------------------------------
+        window 1 -3 1 1
+        data sp01_ec2.dat
+        read < x 1 y 2 >
+        set lx = lg(x)
+        set ly = lg(x*y)
+
+        define min (0)
+        define max (0)
+        lweight 4
+        limits (lx) $min $max
+        # ticksize 0.5 2 -1 10
+        # box 1 3 3 0
+        set lx = lx + 17.384
+        ticksize 1 3 0.2 0.4
+
+	# Chiaberge & Ghisellini SED
+        data output_top13.da
+        read < xx 1 yy 2 >
+        set dimen(lyy)  = dimen(lx)
+        set dimen(ratio)= dimen(lx)
+        interp2 xx yy lx lyy
+
+        # set i = 0
+        # do ic=0,98{
+        #     set lyy[i] = 0
+        #     set j = 0
+        #     while {xx[j]<lx[i+1] && j<399}{
+        #      if (xx[j]>=lx[i] & yy[j]> lyy[i]){
+        #         set lyy[i]= yy[j]}
+        #      set j = j+1
+        #     }
+        # set ratio[i] = (10**lyy[i]-10**ly[i])/((10**lyy[i]+10**ly[i])/2)
+
+        set ratio = (10**lyy-10**ly)/(10**lyy+10**ly)*2
+
+        # set ratio = 0 if(ratio>1.5 || ratio<-1.5)
+
+        # if (ratio[i]>1.5 || ratio[i]<-1.5){set ratio[i] =0}
+        # set ratio[i+1]=ratio[i]
+        # set i=i+1
+        # }
+        # vecminmax ratio min max
+        # define min ($min-0.2)
+        # define max ($max+0.2)
+
+        limits (lx) -1 +1
+        ctype 2
+        box 1 2 0 0
+        ylabel "Deviation"
+
+        connect lx ratio
+
+#---------------------------------------------------------------------
+# plot_es3 : plot the electron spectrum for the compton2d code
+plot_es3 
+
+        #device x11
+        #device postencap f_new.eps
+        #device META meta.dat 
+        read < x 1 y 2 >
+        set lx = lg(x+1)
+        set ly = lg(y*(x+1)**3)
+
+        vecminmax ly min max
+        define min ($max - 4.)
+        define max ($max + 2.0)
+        # location $($gx1+1000) $gx2 $gy1 $gy2
+        limits 0 6 $min $max
+        ticksize -10 100 -10 10
+        box
+        xlabel "Electron Energy in \gamma (log(x))"
+        ylabel log(\gamma^2N) 
+
+        #ltype 1
+        #ctype 3
+        connect lx ly
+
+#---------------------------------------------------------------------
+# plot_est : plot the electron spectrum at 3 different times
+plot_est 
+
+        device postencap electron_distribution.eps
+        lweight 3
+        expand 1.5
+	ctype 2 
+	ltype 2 
+	reset_graph
+        #location 4500 27500 7500 28000
+
+        define model 2 
+	echo "------------------------------"
+	echo "Simulation models: "
+	echo ">  [1] varing gamma "
+	echo ">  [2] homogenous acceleration "
+	echo ">  [3] shock acceleration "
+        echo ">  [4] acceleration + escape "
+        echo ">  [5] external Compton 15"
+        echo ">  [6] external Compton 25"
+        echo ">  [7] FSRQ SSC"
+	define model ? { >>>>           Which model : }
+
+        if( $model==1 ){ data fnt_01_01_033.dat }
+        if( $model==2 ){ data fnt_01_01_044.dat }
+        if( $model==3 ){ data fnt_01_01_108.dat }
+        if( $model==4 ){ data fnt_01_01_108.dat }
+        if( $model==5 ){ data fnt_01_01_157.dat }
+        if( $model==6 ){ data fnt_01_01_162.dat }
+        if( $model==7 ) { data fnt_01_01_178.dat }
+        if( $model==50 ){ data fnt_01_01_223.dat }
+        read < x 1 y 2 >
+        set lx = lg(x+1)
+        set ly = lg(y*(x+1)**3)
+
+        vecminmax ly min max
+        define min ($max - 2.)
+        define max ($max + 1.5 )
+        if( $model>=5 ){ 
+          define max ($max+1.)
+          limits 0 8 $min $max
+        } else{
+          limits (lx) $min $max
+        }
+        ticksize -1 10 -1 10
+        box
+        xlabel "\gamma"
+        ylabel "\gamma^3 N [cm^{-3}]"
+
+        ltype 0
+        connect lx ly
+
+        if( $model==1 ) { data fnt_01_01_036.dat }
+        if( $model==2 ) { data fnt_01_01_047.dat }
+        if( $model==3 ) { data fnt_01_01_111.dat }
+        if( $model==4 ) { data fnt_01_01_111.dat }
+        if( $model==5 ) { data fnt_01_01_160.dat }
+        if( $model==6 ) { data fnt_01_01_165.dat }
+        if( $model==7 ) { data fnt_01_01_184.dat }
+        if( $model==50 ) { data fnt_01_01_226.dat }
+
+        read < x 1 y 2 >
+        set lx = lg(x+1)
+        set ly = lg(y*(x+1)**3)
+
+        ctype 3
+        ltype 2
+        connect lx ly
+
+        if( $model==1 ){ data fnt_01_01_066.dat }
+        if( $model==2 ){ data fnt_01_01_077.dat } #f_nt100.dat
+        if( $model==3 ){ data fnt_01_01_141.dat }
+        if( $model==4 ){ data fnt_01_01_141.dat }
+        if( $model==5 ){ data fnt_01_01_167.dat }
+        if( $model==6 ) { data fnt_01_01_172.dat }
+        if( $model==7 ) { data fnt_01_01_191.dat }
+        if( $model==50 ){ data fnt_01_01_233.dat }
+        read < x 1 y 2 >
+        set lx = lg(x+1)
+        set ly = lg(y*(x+1)**3)
+
+        ctype 5
+        ltype 3
+        connect lx ly
+
+        if( $model >= 5 ){
+           data fnt_01_01_001.dat
+           read < x 1 y 2 >
+           set lx = lg(x+1)
+           set ly = lg(y*(x+1)**3)
+           ctype 6
+           ltype 4
+           connect lx ly
+        }
+
+        ctype 2
+
+        define lab_sw 0
+
+        if($lab_sw == 0){
+           expand 1.2
+
+           if( $model==1 ){
+              relocate ($($gx1+1000) $($gy2-2000)) ctype 2 putlabel 9 "t=4.9\times10^5 s"
+              relocate ($($gx1+1000) $($gy2-3200)) ctype 3 putlabel 9 "t=5.3\times10^5 s"
+              relocate ($($gx1+1000) $($gy2-4400)) ctype 5 putlabel 9 "t=9.8\times10^5 s"
+           }
+           if( $model==2 ){
+              relocate ($($gx1+1000) $($gy2-2000)) ctype 2 putlabel 9 "t=4.9\times10^5 s"
+              relocate ($($gx1+1000) $($gy2-3200)) ctype 3 putlabel 9 "t=5.2\times10^5 s"
+              relocate ($($gx1+1000) $($gy2-4400)) ctype 5 putlabel 9 "t=8.5\times10^5 s"
+           }
+           if( $model==3 ){
+              relocate ($($gx1+1000) $($gy2-2000)) ctype 2 putlabel 9 "t=1.19\times10^6 s" 
+              relocate ($($gx1+1000) $($gy2-3200)) ctype 3 putlabel 9 "t=1.22\times10^6 s" 
+              relocate ($($gx1+1000) $($gy2-4400)) ctype 5 putlabel 9 "t=1.55\times10^6 s" 
+           }
+           if( $model == 4 ){
+	      relocate ($($gx1+1000) $($gy2-2000)) ctype 2 putlabel 9 "t=1.19\times10^6 s" 
+              relocate ($($gx1+1000) $($gy2-3200)) ctype 3 putlabel 9 "t=1.22\times10^6 s" 
+              relocate ($($gx1+1000) $($gy2-4400)) ctype 5 putlabel 9 "t=1.55\times10^6 s" 
+           }
+           if( $model == 5 ){
+	      relocate ($($gx1+1000) $($gy2-2000)) ctype 2 putlabel 9 "t=0.695\times10^7 s" 
+              relocate ($($gx1+1000) $($gy2-3200)) ctype 3 putlabel 9 "t=0.709\times10^7 s" 
+              relocate ($($gx1+1000) $($gy2-4400)) ctype 5 putlabel 9 "t=0.740\times10^7 s"
+              relocate ($($gx1+1000) $($gy2-5600)) ctype 6 putlabel 9 "t=0.0\times10^7 s"
+           }
+           if( $model == 6 ){
+	      relocate ($($gx1+1000) $($gy2-2000)) ctype 2 putlabel 9 "t=1.19\times10^7 s" 
+              relocate ($($gx1+1000) $($gy2-3200)) ctype 3 putlabel 9 "t=1.22\times10^7 s" 
+              relocate ($($gx1+1000) $($gy2-4400)) ctype 5 putlabel 9 "t=1.27\times10^7 s"
+              relocate ($($gx1+1000) $($gy2-5600)) ctype 6 putlabel 9 "t=0.0\times10^7 s"
+           }
+           if( $model == 7 ){
+	      relocate ($($gx1+1000) $($gy2-2000)) ctype 2 putlabel 9 "t=0.49\times10^7 s" 
+              relocate ($($gx1+1000) $($gy2-3200)) ctype 3 putlabel 9 "t=0.51\times10^7 s" 
+              relocate ($($gx1+1000) $($gy2-4400)) ctype 5 putlabel 9 "t=0.53\times10^7 s"
+              relocate ($($gx1+1000) $($gy2-5600)) ctype 6 putlabel 9 "t=0.0\times10^7 s"
+           }
+
+        }
+         
+#---------------------------------------------------------------------
+# pl_elsp : plot the electron spectrum for the power-law test.
+pl_elsp 
+
+        # device postencap pl_es.eps
+        lweight 4
+        expand 1.5
+	ctype 2 
+	ltype 0
+
+        location 6000 28000 4500 31000
+        define cutlevel 1.5
+
+        window 1 -3 1 3
+        define lowl   2.3
+        define highl  3.8
+        define leftl  2.0
+        define rightl 5.0
+        limits $leftl $rightl $lowl $highl
+        ticksize 0.2 1 0.2 0.4
+        box 0 2 0 0
+
+	#-----------------------------
+        set fnvec = < 60 40 30 25 20 10 > 
+        set ltype_vec = <  4  3  2  1  0  5 >   # ltype vector
+        set ctype_vec = <  6  5  4  3  2  7 >   # ctype vector
+	define lt local
+	define ct local
+	do 9=0,dimen(fnvec)-1 {
+	   define 8  $(fnvec[$9])
+	   define lt $(ltype_vec[$9])
+	   define ct $(ctype_vec[$9])
+
+           data f_nt$8.dat
+           read < x 1 y 2 >
+           set lx = lg( x+1 )
+           set ly = lg((x+1)**2*y )
+           ltype $lt
+           ctype $ct
+           connect lx ly
+	} 
+
+        # #-----------------------------
+        # data f_nt60.dat
+        # read < x 1 y 2 >
+        # set lx = lg( x+1 )
+        # set ly = lg((x+1)**2*y )
+        # ltype 4
+        # ctype 6
+        # connect lx ly
+        # 
+        # #-----------------------------
+        # data f_nt40.dat
+        # read < x 1 y 2 >
+        # set lx = lg( x+1 )
+        # set ly = lg((x+1)**2*y )
+        # ltype 3
+        # ctype 5
+        # connect lx ly
+        # 
+        # #-----------------------------
+        # data f_nt30.dat
+        # read < x 1 y 2 >
+        # set lx = lg( x+1 )
+        # set ly = lg((x+1)**2*y )
+        # ltype 2
+        # ctype 4
+        # connect lx ly
+        # 
+        # #-----------------------------
+        # data f_nt25.dat
+        # read < x 1 y 2 >
+        # set lx = lg( x+1 )
+        # set ly = lg((x+1)**2*y )
+        # ltype 1
+        # ctype 3
+        # connect lx ly
+        # 
+        # #-----------------------------
+        # data f_nt20.dat
+        # read < x 1 y 2 >
+        # set lx = lg( x+1 )
+        # set ly = lg((x+1)**2*y )
+        # ltype 0
+        # ctype 2
+        # connect lx ly
+        # 
+        # #-----------------------------
+        # data f_nt10.dat
+        # read < x 1 y 2 >
+        # set lx = lg( x+1 )
+        # set ly = lg((x+1)**2*y )
+        # ltype 5
+        # ctype 7
+        # connect lx ly
+
+	#-----------------------------
+        ctype 2
+        window 1 -3 1 2
+        limits $leftl $rightl $lowl $highl
+        ticksize 0.2 1 0.2 0.4
+        box 0 2 0 0
+
+        define 1 pl5_ele_t
+
+        foreach 8 < 3 2 1.5 1.25 1 0.5 >
+           data $1$8.data
+           read < x 1 y 2 >
+           set lx = x
+           set ly = y + 2*x
+           ltype 4
+           ctype 6
+           connect lx ly
+	}
+
+        # data $13.data
+        # read < x 1 y 2 >
+        # set lx = x
+        # set ly = y+2*x
+        # ltype 4
+        # ctype 6
+        # connect lx ly
+
+        # data $12.data
+        # read < x 1 y 2 >
+        # set lx = x
+        # set ly = y+2*x
+        # ltype 3
+        # ctype 5
+        # connect lx ly
+
+        # data $11.5.data
+        # read < x 1 y 2 >
+        # set lx = x
+        # set ly = y+2*x
+        # ltype 2
+        # ctype 4
+        # connect lx ly
+
+        # data $11.25.data
+        # read < x 1 y 2 >
+        # set lx = x
+        # set ly = y+2*x
+        # ltype 1
+        # ctype 3
+        # connect lx ly
+
+        # data $11.data
+        # read < x 1 y 2 >
+        # set lx = x
+        # set ly = y+2*x
+        # ltype 0
+        # ctype 2
+        # connect lx ly
+ 
+        # data $10.5.data
+        # read < x 1 y 2 >
+        # set lx = x
+        # set ly = y+2*x
+        # ltype 5
+        # ctype 7
+        # connect lx ly
+
+	#-------------------------------------------------
+        ctype 2
+        window 1 -3 1 2:3
+        ylabel "log(\gamma^2N_\gamma)"
+
+        window 1 -3 1 1
+        limits $leftl $rightl -0.3 0.3
+        ticksize 0.2 1 0.1 0.2
+        box 1 2 0 0
+        xlabel "log(\gamma)"
+        ylabel "Deviation"
+
+        define min (0)
+        define max (0)
+
+	#-----------------------------
+        data f_nt60.dat
+        read < x0 1 y0 2 >
+        set lx0 = lg(x0+1)
+        set ly0 = lg((x0+1)**2*y0)
+
+        data $13.data
+        read < x 1 y 2 >
+        set lx1 = x
+        interp2 x y lx0 ly1 
+        set ly1 = ly1 + 2*lx0
+
+        vecminmax ly1 min max
+        define cut ($max - $cutlevel)
+        set ratio = (10**ly1 - 10**ly0)/((10**ly1 + 10**ly0)/2)
+
+        ltype 4
+        ctype 6
+        connect lx0 ratio if( ly0 > $cut )
+
+	#-----------------------------
+        data f_nt10.dat
+        read < x0 1 y0 2 >
+        set lx0 = lg(x0+1)
+        set ly0 = 2*lx0+lg(y0)
+
+        data $10.5.data
+        read < x 1 y 2 >
+        set lx1 = x
+        interp2 x y lx0 ly1 
+        set ly1 = ly1 + 2*lx0
+
+        vecminmax ly1 min max
+        define cut ($max - $cutlevel)
+        set ratio = (10**ly1 - 10**ly0)/((10**ly1 + 10**ly0)/2)
+
+        ltype 5
+        ctype 7
+        connect lx0 ratio if( ly0 > $cut )
+
+	#-----------------------------
+        data f_nt20.dat
+        read < x0 1 y0 2 >
+        set lx0 = lg(x0+1)
+        set ly0 = lg((x0+1)**2*y0)
+
+        data $11.data
+        read < x 1 y 2 >
+        set lx1 = x
+        interp2 x y lx0 ly1
+        set ly1 = ly1 + 2*lx0
+
+        vecminmax ly1 min max
+        define cut ($max - $cutlevel)
+        set ratio = (10**ly1 - 10**ly0)/((10**ly1 + 10**ly0)/2)
+
+        ltype 0
+        ctype 2
+        connect lx0 ratio if( ly0 > $cut )
+
+	#-----------------------------
+        data f_nt30.dat
+        read < x0 1 y0 2 >
+        set lx0 = lg(x0+1)
+        set ly0 = lg((x0+1)**2*y0)
+
+        data $11.5.data
+        read < x 1 y 2 >
+        set lx1 = x
+        interp2 x y lx0 ly1
+        set ly1 = ly1 + 2*lx0
+
+        vecminmax ly1 min max
+        define cut ($max - $cutlevel) 
+        set ratio = (10**ly1 - 10**ly0)/((10**ly1 + 10**ly0)/2)
+
+        ltype 2
+        ctype 4
+        connect lx0 ratio if( ly0 > $cut )
+
+	#-----------------------------
+        data f_nt25.dat
+        read < x0 1 y0 2 >
+        set lx0 = lg(x0+1)
+        set ly0 = lg((x0+1)**2*y0)
+
+        data $11.25.data
+        read < x 1 y 2 >
+        set lx1 = x
+        interp2 x y lx0 ly1
+        set ly1 = ly1 + 2*lx0
+
+        vecminmax ly1 min max
+        define cut ($max - $cutlevel)
+        set ratio = (10**ly1 - 10**ly0)/((10**ly1 + 10**ly0)/2)
+
+        ltype 1
+        ctype 3
+        connect lx0 ratio if( ly0 > $cut )
+
+	#-----------------------------
+        data f_nt40.dat
+        read < x0 1 y0 2 >
+        set lx0 = lg(x0+1)
+        set ly0 = lg((x0+1)**2*y0)
+
+        data $12.data
+        read < x 1 y 2 >
+        set lx1 = x
+        interp2 x y lx0 ly1
+        set ly1 = ly1 + 2*lx0
+
+        vecminmax ly1 min max
+        define cut ($max - $cutlevel)
+        set ratio = (10**ly1 - 10**ly0)/((10**ly1 + 10**ly0)/2)
+        
+        ltype 3
+        ctype 5
+        connect lx0 ratio if( ly0 > $cut )
+	#-----------------------------
+
+
+#---------------------------------------------------------------------
+# crossc    : prepares the light curve for the DCF code
+crossc 
+
+	# set_read_sim_gf
+	set_read_sim_gf
+
+        define XC_DATA "$!HOME/data"
+	#define XC_DATA "/home/gfossati/Science/Xuhui/paper_MC/xc_data"
+
+        #DEL# data lc07_ev0.dat
+        # data "$!XC_DATA/$!SIMDIR/lc07_ev0.dat"
+        data "lc07_ev0.dat"
+        read < x 1 y1 2 y2 3 y3 4 y4 5 y5 6 y6 7 y7 8 >
+        define scaling_factor read 9 2 
+	echo ">*** Parameters read from data file ***"
+        echo "> Luminosity scaling factor : "$scaling_factor
+        #define scaling_factor ? { >>> Luminosity scaling factor : }
+
+       
+        #DEL# echo "------------------------------"
+        #DEL# echo "> Simulation cases: "
+        #DEL# echo ">   [1] standard "
+        #DEL# echo ">   [2] empty + foreground "
+        #DEL# echo ">   [3] better SED "
+        #DEL# echo ">   [4] test "
+        #DEL# echo ">   [5] red blazar "
+        #DEL# define sim_case ?  < >>>>           Which case : >
+
+        #DEL# if( $sim_case == 2 )
+        if( $flag_fg_case ){
+           data "$!XC_DATA/$!SIMDIR/lc07_fg.dat"
+           read < fg1 2 fg2 3 fg3 4 fg4 5 fg5 6 fg6 7 fg7 8 >
+           define fg_scaling_factor read 9 2   #GF# NEW
+	   echo ">*** Parameters read from data file ***"
+	   # echo "> LC FG scaling factor : "$fg_scaling_factor
+           define fg_scaling_factor ? { >>> FG Luminosity scaling factor : }
+
+	   do 9=1,7 {
+	      define fg$9 $( fg$9[0]/$fg_scaling_factor )
+	      set y$9 = y$9/$scaling_factor + $fg$9
+	   }
+
+	   #DEL# do 9=1,7 {
+           #DEL#    define fg$9 read 9 $($9+1)
+	   #DEL#    set y$9 = y$9 + $fg$9
+	   #DEL# }
+
+           #DEL# define fg1 read 9 2
+           #DEL# define fg2 read 9 3
+           #DEL# define fg3 read 9 4
+           #DEL# define fg4 read 9 5
+           #DEL# define fg5 read 9 6
+           #DEL# define fg6 read 9 7
+           #DEL# define fg7 read 9 8
+           #DEL# set y1 = y1 + $fg1
+           #DEL# set y2 = y2 + $fg2
+           #DEL# set y3 = y3 + $fg3
+           #DEL# set y4 = y4 + $fg4
+           #DEL# set y5 = y5 + $fg5
+           #DEL# set y6 = y6 + $fg6
+           #DEL# set y7 = y7 + $fg7
+        }
+
+        set y2 = y2/1.e40
+        set y3 = y3/1.e40
+        set y7 = y7/1.e40
+
+        #if( $sim_case == 1 ){ define 9 'std' } 
+        #if( $sim_case == 2 ){ define 9 'fg' } 
+        #if( $sim_case == 3 ){ define 9 'bs' } 
+        #if( $sim_case == 4 ){ define 9 'test' } 
+        #if( $sim_case == 5 ){ define 9 'red' } 
+        #if( $sim_case == 6 ){ define 9 'hdc' }
+        define 9 $which_sim
+        print $9_cc2.dat  '1 %14.7e 1 %14.7e 0\n' {x y2}
+        print $9_cc3.dat  '1 %14.7e 1 %14.7e 0\n' {x y3}
+        print $9_cc7.dat  '1 %14.7e 1 %14.7e 0\n' {x y7}
+
+        #DEL# if( $sim_case == 1 ){
+        #DEL#    print std_cc2.dat  '1 %14.7e 1 %14.7e 0\n' {x y2}
+        #DEL#    print std_cc3.dat  '1 %14.7e 1 %14.7e 0\n' {x y3}
+        #DEL#    print std_cc7.dat  '1 %14.7e 1 %14.7e 0\n' {x y7}
+        #DEL# }
+        #DEL# if( $sim_case == 2 ){
+        #DEL#    print fg_cc2.dat   '1 %14.7e 1 %14.7e 0\n' {x y2}
+        #DEL#    print fg_cc3.dat   '1 %14.7e 1 %14.7e 0\n' {x y3}
+        #DEL#    print fg_cc7.dat   '1 %14.7e 1 %14.7e 0\n' {x y7} 
+        #DEL# }
+        #DEL# if( $sim_case == 3 ){
+        #DEL#    print bs_cc2.dat   '1 %14.7e 1 %14.7e 0\n' {x y2}
+        #DEL#    print bs_cc3.dat   '1 %14.7e 1 %14.7e 0\n' {x y3}
+        #DEL#    print bs_cc7.dat   '1 %14.7e 1 %14.7e 0\n' {x y7}
+        #DEL# }
+        #DEL# if( $sim_case == 4 ){
+        #DEL#    print test_cc2.dat '1 %14.7e 1 %14.7e 0\n' {x y2}
+        #DEL#    print test_cc3.dat '1 %14.7e 1 %14.7e 0\n' {x y3}
+        #DEL#    print test_cc7.dat '1 %14.7e 1 %14.7e 0\n' {x y7}
+        #DEL# }
+        #DEL# if( $sim_case == 5 ){
+        #DEL#    print red_cc2.dat  '1 %14.7e 1 %14.7e 0\n' {x y2}
+        #DEL#    print red_cc3.dat  '1 %14.7e 1 %14.7e 0\n' {x y3}
+        #DEL#    print red_cc7.dat  '1 %14.7e 1 %14.7e 0\n' {x y7}
+        #DEL# }
+
+##---------------------------------------------------------------------
+movie_es
+
+        device x11
+        define i1 0
+        limits 1 8 1 4
+        ticksize -10 100 -10 10
+        box
+        xlabel "Electron Energy in \gamma (log(x))"
+        ylabel "log(\gamma^2N)"
+
+        set i2=0
+        set i3=0
+        do i3=0,5{
+           do i2=0,9{
+              data fnt_01_01_$($i3)$($i2)$($i1).dat
+              read {x 1 y 2}
+              set lx = lg(x+1)
+              set ly = lg(y*(x+1)**2)
+              connect lx ly
+              xlabel "Electron Energy in \gamma (log(x))"
+              ylabel "log(\gamma^2N)" 
+           }
+        }
+
+#-------------------------------------------------------------------------------
+plot_454
+      device postencap 454_fermi1.eps
+      data 454_fermi.lc
+      read {x 1 y 3}
+      set ly = LG(y)
+      window 1 -2 1 2
+      limits 54650 54900 -7. -5.
+      ticksize 50 100 -1 5
+      box
+      connect x ly
+      window 1 -2 1 1
+      limits 54900 55150 -7. -5
+      ticksize 50 100 -1 5
+      box
+      connect x ly
+#-------------------------------
+disc_L
+      data blakcbody.in
+      read {x 1 y 2}
+      do
+
+

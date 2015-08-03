@@ -1,0 +1,202 @@
+data disk.in
+plot_sp
+device x11
+plot_sp
+quit
+data blackbody.in
+plot_sp
+device x11
+plot_sp
+quit
+data blackbofy.in
+data blackbody.in
+device x11
+plot_sp
+quit
+data blackbody.in
+device x11
+plot_sp
+quit
+device x11
+data blackbody.in
+plot_sp
+quit
+data tavecchio08blr.in
+plot_sp
+read {x 1 y 2}
+box
+device x11
+box
+erase
+limits x y
+box
+connect x y
+quit
+data tavecchio08blr.in
+data {xt 1 yt 2}
+read {xt 1 yt 2}
+data blackbody.in
+read {xb 1 yb 2}
+interp2 xt yt xb yblr
+device x11
+limits xb yblr
+box
+connect xb yblr
+quit
+data tavecchio08blr.in
+read {lxt 1 lyt 2}
+set xt = 10**lxt
+set yt = 10**lyt
+data blackbody.in
+read {xb 1 yb 2}
+interp2 xt yt xb yblr
+device x11
+limits xb yblr
+box
+connect xb yblr
+erase
+set lxb = lg(xb)
+set lyb = lg(yb)
+interp2 lxt lyt lxb lyblr
+limits lxb lyblr
+box
+connect lxb lyblr
+set lxt = lxt-17.38
+interp2 lxt lyt lxb lyblr
+erase
+limits lxb lyblr
+box
+connect lxb lyblr
+print ltave_blr.dat "%14.7e %14.7e\n" {lxb lyblr}
+print ltave_blr.dat '%14.7e %14.7e\n' {lxb lyblr}
+set yblr = 10**yblr
+print tave_blr.dat '%14.7e %14.7e\n' {xb yblr}
+quit
+data ltave_blr.dat
+read {lx 1 ly 2}
+set x = 10**lx
+set y = 10**ly
+print tave_blr.dat '%14.7e %14.7e\n' {x y}
+quit
+data tave_blr.dat
+read {xtrash 1 z 2}
+data blackbody.in
+read {x 1 y 2}
+print bb_blr.dat '%14.7e %14.7e %14.7\n' {x y z}
+print bb_blr.dat '%14.7e %14.7e %14.7e\n' {x y z}
+quit
+data tave_blr.dat
+read {xtrash 1 z 2}
+data blackbody.in
+read {x 1 y 2}
+set lx = lg(x)
+set ly = lg(y)
+set lz = lg(z)
+print bb_blr.dat '%14.7e %14.7e %14.7\n' {lx ly lz}
+print bb_blr.dat '%14.7e %14.7e %14.7e\n' {lx ly lz}
+quit
+data bb_blr.dat
+read {x 1 y 2 z 3}
+print lbb_blr.dat '%f %f %f\n' {x y z}
+quit
+data blackbody.in
+read{x 1 y 2 z 3}
+set xx=10**x
+limits x z
+device x11
+box
+connect x z
+quit
+data lbb_blr.dat
+read {x 1 y 2 z 3}
+limits x z
+device x11
+box
+connect x z
+set lz = z-x
+quit
+data tave_xfx.dat
+read {x 1 xy 2}
+set y=xy/x
+print tave_f.dat '%14.7e %14.7e\n' {x y}
+quit
+data tave_f.dat
+device x11
+plot_sp
+quit
+device x11
+data blackbody.in
+plot_sp
+quit
+device x11
+data blackbody.in
+plot_sp
+quit
+data tave_blr_fig4_ub.dat
+read tavelx tavely
+read {t
+quit
+data tave_lines.data
+data tave_line.dat
+quit
+data tave_ublines.dat
+device x11
+read {x 1 y 2}
+connect x y
+quit
+data tave_ublines.dat
+read {x 1 y 2}
+quit
+data tave_ublines.dat
+read {x 1 y 2}
+limits x y
+device x11
+limits (x) (y)
+connect x y
+limits (x) -35 -20
+box
+erase
+box
+connect x y
+limits (x) -30 -15
+erase
+box
+connect x y
+set xy = x+y
+erase
+limits (x) -6 2
+box
+connect x xy
+erase
+limits 12 22 -6 2
+connect x xy
+box
+quit
+data blackbody.in
+read {x 1 y 3}
+device x11
+connect x y
+limits (x) (y)
+connect x y
+erase
+box
+quit
+data blackbody.in
+read {x 1 y 3}
+device x11
+limits (x) (y)
+box
+connect x y
+set xy =x*y
+set lx=lg(x)
+set lxy=lg(xy)
+erase
+limits (lx) (ly)
+limits (lx) (lxy)
+box
+connect lx lxy
+limits -5 5 -19 -13
+erase
+box
+connect lx lxy
+quit
